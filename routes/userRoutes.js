@@ -19,5 +19,6 @@ router.post("/login", authController.loginUser);
 router.get("/dealers", authController.getAllDealers);
 router.put("/approve/:id", authController.approveDealer);
 router.put("/reject/:id", authController.rejectDealer);
+router.delete("/delete/:id", authController.deleteUser);
 
 module.exports = router;
