@@ -57,12 +57,20 @@ exports.createApplication = async (req, res) => {
 };
 
 // ================= GET ALL (User wise) =================
+// applicationController.js માં આ મુજબ ફેરફાર કરો
 exports.getMyApplications = async (req, res) => {
   try {
     const userId = req.user.id;
+    const userRole = req.user.role; // જો તમારા ટોકનમાં રોલ હોય તો
 
-    const apps = await Application.find({ user: userId }).sort({ createdAt: -1 });
+    let query = { user: userId };
+    
+    // જો યુઝર Admin હોય, તો બધી એપ્લિકેશન બતાવો (ખાલી ક્વેરી)
+    if (userRole === "admin") {
+      query = {};
+    }
 
+    const apps = await Application.find(query).sort({ createdAt: -1 });
     res.json(apps);
   } catch (err) {
     res.status(500).json({ message: "Server Error" });
