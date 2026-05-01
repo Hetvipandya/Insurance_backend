@@ -30,6 +30,11 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI;
 
+if (!MONGODB_URI) {
+  console.error("❌ MONGODB_URI is missing in environment variables");
+  process.exit(1);
+}
+
 mongoose.connect(MONGODB_URI)
 .then(() => {
     console.log("✅ MongoDB connected");
