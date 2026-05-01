@@ -10,7 +10,7 @@ const {
   getApplicationById,
   updateApplication,
   deleteApplication,
-} = require("../controllers/ApplicationController");
+} = require("../controllers/applicationController");
 
 const uploadFields = upload.fields([
   { name: "rcBookImages", maxCount: 5 },
