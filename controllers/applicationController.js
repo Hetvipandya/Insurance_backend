@@ -2,6 +2,33 @@ const Application = require("../models/Application");
 const cloudinary = require("cloudinary").v2;
 const fs = require("fs");
 
+// ================= CLOUDINARY CONFIG =================
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// ================= UPLOAD TO CLOUDINARY =================
+const uploadToCloudinary = async (filePath) => {
+  try {
+    const result = await cloudinary.uploader.upload(filePath, {
+      folder: "insurance-applications",
+      resource_type: "auto",
+    });
+    
+    // Delete local file after successful upload
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    return result.secure_url;
+  } catch (error) {
+    console.error("Cloudinary upload error:", error);
+    throw error;
+  }
+};
+
 // ================= CREATE =================
 exports.createApplication = async (req, res) => {
   try {
