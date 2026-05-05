@@ -7,6 +7,7 @@ const { authMiddleware } = require("../middleware/auth");
 const {
   createApplication,
   getMyApplications,
+  getAllApplicationsForAdmin,
   getApplicationById,
   updateApplication,
   deleteApplication,
@@ -22,6 +23,7 @@ const uploadFields = upload.fields([
 
 router.post("/create", authMiddleware, uploadFields, createApplication);
 router.get("/my", authMiddleware, getMyApplications);
+router.get("/admin", authMiddleware, getAllApplicationsForAdmin);
 router.get("/:id", authMiddleware, getApplicationById);
 router.put("/update/:id", authMiddleware, uploadFields, updateApplication);
 router.delete("/delete/:id", authMiddleware, deleteApplication);
