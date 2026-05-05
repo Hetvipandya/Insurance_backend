@@ -1,4 +1,6 @@
 const Application = require("../models/Application");
+const cloudinary = require("cloudinary").v2;
+const fs = require("fs");
 
 // ================= CREATE =================
 exports.createApplication = async (req, res) => {
@@ -10,14 +12,27 @@ exports.createApplication = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // ✅ Safe file extraction (no crash)
-    const rcBookImages = req.files?.rcBookImages?.map(f => f.path) || [];
-    const aadharCardImages = req.files?.aadharCardImages?.map(f => f.path) || [];
-    const panCardImages = req.files?.panCardImages?.map(f => f.path) || [];
-    const oldPolicyImages = req.files?.oldPolicyImages?.map(f => f.path) || [];
-    const otherImages = req.files?.otherImages?.map(f => f.path) || [];
+    // ✅ Upload to Cloudinary instead of local path
+    const rcBookImages = req.files?.rcBookImages
+      ? await Promise.all(req.files.rcBookImages.map(f => uploadToCloudinary(f.path)))
+      : [];
 
-    // validations
+    const aadharCardImages = req.files?.aadharCardImages
+      ? await Promise.all(req.files.aadharCardImages.map(f => uploadToCloudinary(f.path)))
+      : [];
+
+    const panCardImages = req.files?.panCardImages
+      ? await Promise.all(req.files.panCardImages.map(f => uploadToCloudinary(f.path)))
+      : [];
+
+    const oldPolicyImages = req.files?.oldPolicyImages
+      ? await Promise.all(req.files.oldPolicyImages.map(f => uploadToCloudinary(f.path)))
+      : [];
+
+    const otherImages = req.files?.otherImages
+      ? await Promise.all(req.files.otherImages.map(f => uploadToCloudinary(f.path)))
+      : [];
+
     if (!carNo || !tp) {
       return res.status(400).json({ message: "carNo & tp required" });
     }
@@ -46,7 +61,6 @@ exports.createApplication = async (req, res) => {
     });
 
   } catch (err) {
-    // ✅ handle invalid file type
     if (err.message.includes("Only JPG")) {
       return res.status(400).json({ message: err.message });
     }
@@ -108,30 +122,39 @@ exports.updateApplication = async (req, res) => {
       return res.status(404).json({ message: "Not found" });
     }
 
-    // 🔹 Update text fields
     if (carNo) app.carNo = carNo;
     if (tp) app.tp = tp;
     if (otherDetails) app.otherDetails = otherDetails;
 
-    // 🔹 Replace images if new uploaded
+    // 🔹 Replace images with Cloudinary upload
     if (req.files["rcBookImages"]) {
-      app.rcBookImages = req.files["rcBookImages"].map(f => f.path);
+      app.rcBookImages = await Promise.all(
+        req.files["rcBookImages"].map(f => uploadToCloudinary(f.path))
+      );
     }
 
     if (req.files["aadharCardImages"]) {
-      app.aadharCardImages = req.files["aadharCardImages"].map(f => f.path);
+      app.aadharCardImages = await Promise.all(
+        req.files["aadharCardImages"].map(f => uploadToCloudinary(f.path))
+      );
     }
 
     if (req.files["panCardImages"]) {
-      app.panCardImages = req.files["panCardImages"].map(f => f.path);
+      app.panCardImages = await Promise.all(
+        req.files["panCardImages"].map(f => uploadToCloudinary(f.path))
+      );
     }
 
     if (req.files["oldPolicyImages"]) {
-      app.oldPolicyImages = req.files["oldPolicyImages"].map(f => f.path);
+      app.oldPolicyImages = await Promise.all(
+        req.files["oldPolicyImages"].map(f => uploadToCloudinary(f.path))
+      );
     }
 
     if (req.files["otherImages"]) {
-      app.otherImages = req.files["otherImages"].map(f => f.path);
+      app.otherImages = await Promise.all(
+        req.files["otherImages"].map(f => uploadToCloudinary(f.path))
+      );
     }
 
     await app.save();
