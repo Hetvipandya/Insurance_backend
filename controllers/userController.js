@@ -66,16 +66,20 @@ exports.registerUser = async (req, res) => {
 // ===================== LOGIN =====================
 exports.loginUser = async (req, res) => {
   try {
-    const { emailId, password } = req.body;
+    const { emailId, mobileNumber, password } = req.body;
 
-    if (!emailId || !password) {
-      return res.status(400).json({ message: "All fields required" });
+    if ((!emailId && !mobileNumber) || !password) {
+      return res.status(400).json({ message: "Email or mobile number and password are required" });
     }
 
-   const user = await User.findOne({ email: emailId });
+    const query = [];
+    if (emailId) query.push({ emailId });
+    if (mobileNumber) query.push({ mobileNumber });
+
+    const user = await User.findOne({ $or: query });
 
     if (!user) {
-      return res.status(400).json({ message: "User not found" });
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
     // check password
