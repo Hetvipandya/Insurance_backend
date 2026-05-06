@@ -58,7 +58,6 @@ const applicationSchema = new mongoose.Schema(
     // 🔹 TP Type
     tp: {
       type: String,
-      enum: ["none", "full", "od"],
       required: true,
       default: "none",
     },
