@@ -1,6 +1,5 @@
 const Application = require("../models/Application");
 const cloudinary = require("cloudinary").v2;
-const fs = require("fs");
 
 // ================= CLOUDINARY CONFIG =================
 cloudinary.config({
@@ -10,23 +9,26 @@ cloudinary.config({
 });
 
 // ================= UPLOAD TO CLOUDINARY =================
-const uploadToCloudinary = async (filePath) => {
-  try {
-    const result = await cloudinary.uploader.upload(filePath, {
-      folder: "insurance-applications",
-      resource_type: "auto",
-    });
-    
-    // Delete local file after successful upload
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-    
-    return result.secure_url;
-  } catch (error) {
-    console.error("Cloudinary upload error:", error);
-    throw error;
-  }
+const uploadBufferToCloudinary = (buffer, originalname) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "insurance-applications",
+        resource_type: "auto",
+        public_id: `${Date.now()}-${Math.round(Math.random() * 1e9)}`,
+        overwrite: true,
+      },
+      (error, result) => {
+        if (error) {
+          console.error("Cloudinary upload error:", error);
+          return reject(error);
+        }
+        resolve(result.secure_url);
+      }
+    );
+
+    uploadStream.end(buffer);
+  });
 };
 
 // ================= CREATE =================
@@ -43,29 +45,28 @@ exports.createApplication = async (req, res) => {
       return res.status(403).json({ message: "Only admin can upload policy document" });
     }
 
-    // ✅ Upload to Cloudinary instead of local path
     const rcBookImages = req.files?.rcBookImages
-      ? await Promise.all(req.files.rcBookImages.map(f => uploadToCloudinary(f.path)))
+      ? await Promise.all(req.files.rcBookImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname)))
       : [];
 
     const aadharCardImages = req.files?.aadharCardImages
-      ? await Promise.all(req.files.aadharCardImages.map(f => uploadToCloudinary(f.path)))
+      ? await Promise.all(req.files.aadharCardImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname)))
       : [];
 
     const panCardImages = req.files?.panCardImages
-      ? await Promise.all(req.files.panCardImages.map(f => uploadToCloudinary(f.path)))
+      ? await Promise.all(req.files.panCardImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname)))
       : [];
 
     const oldPolicyImages = req.files?.oldPolicyImages
-      ? await Promise.all(req.files.oldPolicyImages.map(f => uploadToCloudinary(f.path)))
+      ? await Promise.all(req.files.oldPolicyImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname)))
       : [];
 
     const otherImages = req.files?.otherImages
-      ? await Promise.all(req.files.otherImages.map(f => uploadToCloudinary(f.path)))
+      ? await Promise.all(req.files.otherImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname)))
       : [];
 
     const adminPolicyDocument = req.files?.adminPolicyDocument
-      ? await uploadToCloudinary(req.files.adminPolicyDocument[0].path)
+      ? await uploadBufferToCloudinary(req.files.adminPolicyDocument[0].buffer, req.files.adminPolicyDocument[0].originalname)
       : null;
 
     if (!carNo || !tp) {
@@ -212,39 +213,39 @@ exports.updateApplication = async (req, res) => {
         return res.status(403).json({ message: "Only admin can upload policy document" });
       }
 
-      app.adminPolicyDocument = await uploadToCloudinary(
-        req.files["adminPolicyDocument"][0].path
+      app.adminPolicyDocument = await uploadBufferToCloudinary(
+        req.files["adminPolicyDocument"][0].buffer,
+        req.files["adminPolicyDocument"][0].originalname
       );
     }
 
-    // 🔹 Replace images with Cloudinary upload
     if (req.files["rcBookImages"]) {
       app.rcBookImages = await Promise.all(
-        req.files["rcBookImages"].map(f => uploadToCloudinary(f.path))
+        req.files["rcBookImages"].map(f => uploadBufferToCloudinary(f.buffer, f.originalname))
       );
     }
 
     if (req.files["aadharCardImages"]) {
       app.aadharCardImages = await Promise.all(
-        req.files["aadharCardImages"].map(f => uploadToCloudinary(f.path))
+        req.files["aadharCardImages"].map(f => uploadBufferToCloudinary(f.buffer, f.originalname))
       );
     }
 
     if (req.files["panCardImages"]) {
       app.panCardImages = await Promise.all(
-        req.files["panCardImages"].map(f => uploadToCloudinary(f.path))
+        req.files["panCardImages"].map(f => uploadBufferToCloudinary(f.buffer, f.originalname))
       );
     }
 
     if (req.files["oldPolicyImages"]) {
       app.oldPolicyImages = await Promise.all(
-        req.files["oldPolicyImages"].map(f => uploadToCloudinary(f.path))
+        req.files["oldPolicyImages"].map(f => uploadBufferToCloudinary(f.buffer, f.originalname))
       );
     }
 
     if (req.files["otherImages"]) {
       app.otherImages = await Promise.all(
-        req.files["otherImages"].map(f => uploadToCloudinary(f.path))
+        req.files["otherImages"].map(f => uploadBufferToCloudinary(f.buffer, f.originalname))
       );
     }
 

@@ -114,10 +114,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 
-// ✅ STATIC
-app.use('/uploads', express.static('uploads'));
-
-
 // ✅ ROUTES
 app.use("/api/user", userRoutes);
 app.use("/api/application", applicationRoutes);
