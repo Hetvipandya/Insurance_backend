@@ -19,6 +19,7 @@ const uploadFields = upload.fields([
   { name: "panCardImages", maxCount: 5 },
   { name: "oldPolicyImages", maxCount: 5 },
   { name: "otherImages", maxCount: 5 },
+  { name: "adminPolicyDocument", maxCount: 1 },
 ]);
 
 router.post("/create", authMiddleware, uploadFields, createApplication);

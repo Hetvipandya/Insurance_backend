@@ -39,6 +39,10 @@ exports.createApplication = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    if (req.files?.adminPolicyDocument && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Only admin can upload policy document" });
+    }
+
     // ✅ Upload to Cloudinary instead of local path
     const rcBookImages = req.files?.rcBookImages
       ? await Promise.all(req.files.rcBookImages.map(f => uploadToCloudinary(f.path)))
@@ -60,6 +64,10 @@ exports.createApplication = async (req, res) => {
       ? await Promise.all(req.files.otherImages.map(f => uploadToCloudinary(f.path)))
       : [];
 
+    const adminPolicyDocument = req.files?.adminPolicyDocument
+      ? await uploadToCloudinary(req.files.adminPolicyDocument[0].path)
+      : null;
+
     if (!carNo || !tp) {
       return res.status(400).json({ message: "carNo & tp required" });
     }
@@ -80,6 +88,7 @@ exports.createApplication = async (req, res) => {
       oldPolicyImages,
       otherImages,
       otherDetails,
+      adminPolicyDocument,
     });
 
     res.status(201).json({
@@ -163,7 +172,7 @@ exports.getApplicationById = async (req, res) => {
 // ================= UPDATE =================
 exports.updateApplication = async (req, res) => {
   try {
-    const { carNo, tp, otherDetails } = req.body;
+    const { carNo, tp, otherDetails, status } = req.body;
 
     const app = await Application.findById(req.params.id);
 
@@ -174,6 +183,29 @@ exports.updateApplication = async (req, res) => {
     if (carNo) app.carNo = carNo;
     if (tp) app.tp = tp;
     if (otherDetails) app.otherDetails = otherDetails;
+
+    if (status) {
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Only admin can update status" });
+      }
+
+      const allowedStatuses = ["pending", "approved", "rejected"];
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+
+      app.status = status;
+    }
+
+    if (req.files["adminPolicyDocument"]) {
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Only admin can upload policy document" });
+      }
+
+      app.adminPolicyDocument = await uploadToCloudinary(
+        req.files["adminPolicyDocument"][0].path
+      );
+    }
 
     // 🔹 Replace images with Cloudinary upload
     if (req.files["rcBookImages"]) {

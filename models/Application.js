@@ -42,6 +42,19 @@ const applicationSchema = new mongoose.Schema(
       default: [],
     },
 
+    // 🔹 Admin Policy Document
+    adminPolicyDocument: {
+      type: String,
+      default: null,
+    },
+
+    // 🔹 Application Status
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+
     // 🔹 TP Type
     tp: {
       type: String,
