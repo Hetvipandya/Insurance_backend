@@ -93,7 +93,11 @@ exports.createApplication = async (req, res) => {
 
     res.status(201).json({
       message: "Application created",
-      data: app,
+      data: {
+        ...app.toObject(),
+        adminPolicyDocument: app.adminPolicyDocument,
+        status: app.status,
+      },
     });
 
   } catch (err) {
@@ -117,11 +121,15 @@ exports.getMyApplications = async (req, res) => {
 
     // ✅ Admin → ALL applications
     if (userRole === "admin") {
-      apps = await Application.find().sort({ createdAt: -1 });
+      apps = await Application.find()
+        .populate("user", "fullName emailId mobileNumber")
+        .sort({ createdAt: -1 });
     } 
     // ✅ Normal user → Only own applications
     else {
-      apps = await Application.find({ user: userId }).sort({ createdAt: -1 });
+      apps = await Application.find({ user: userId })
+        .populate("user", "fullName emailId mobileNumber")
+        .sort({ createdAt: -1 });
     }
 
     res.json(apps);
@@ -157,7 +165,8 @@ exports.getAllApplicationsForAdmin = async (req, res) => {
 // ================= GET SINGLE =================
 exports.getApplicationById = async (req, res) => {
   try {
-    const app = await Application.findById(req.params.id);
+    const app = await Application.findById(req.params.id)
+      .populate("user", "fullName emailId mobileNumber");
 
     if (!app) {
       return res.status(404).json({ message: "Not found" });
