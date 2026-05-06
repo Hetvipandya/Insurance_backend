@@ -52,7 +52,9 @@ dotenv.config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const bcrypt = require('bcryptjs');
 const cloudinary = require('cloudinary').v2; // ✅ ADD
+const User = require('./models/User');
 
 const userRoutes = require("./routes/userRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
@@ -69,6 +71,42 @@ cloudinary.config({
 
 console.log("☁️ Cloudinary Config Loaded");
 
+async function ensureAdminUser() {
+  const emailId = process.env.ADMIN_EMAIL || 'admin10@gmail.com';
+  const mobileNumber = process.env.ADMIN_MOBILE || '9876543210';
+  const plainPassword = process.env.ADMIN_PASSWORD || 'Admin789';
+
+  try {
+    let admin = await User.findOne({ $or: [{ emailId }, { mobileNumber }] });
+
+    if (admin) {
+      admin.role = 'admin';
+      admin.isApproved = true;
+      admin.isRejected = false;
+      await admin.save();
+      console.log(`✅ Admin user ready: ${emailId}`);
+      return;
+    }
+
+    const hashed = await bcrypt.hash(plainPassword, 10);
+
+    await User.create({
+      fullName: 'Admin',
+      emailId,
+      mobileNumber,
+      address: 'Ahmedabad',
+      password: hashed,
+      role: 'admin',
+      photo: null,
+      isApproved: true,
+      isRejected: false,
+    });
+
+    console.log(`✅ Default admin created: ${emailId}`);
+  } catch (err) {
+    console.error('❌ Admin seed error:', err.message);
+  }
+}
 
 // ✅ MIDDLEWARE FIRST
 app.use(cors());
@@ -101,8 +139,9 @@ if (!MONGODB_URI) {
 
 
 mongoose.connect(MONGODB_URI)
-.then(() => {
+.then(async () => {
     console.log("✅ MongoDB connected");
+    await ensureAdminUser();
     app.listen(PORT, () => {
         console.log(`🚀 Server running on port ${PORT}`);
     });
