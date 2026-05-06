@@ -89,14 +89,15 @@ exports.createApplication = async (req, res) => {
       otherImages,
       otherDetails,
       adminPolicyDocument,
+      status: "pending",
     });
 
     res.status(201).json({
       message: "Application created",
       data: {
         ...app.toObject(),
-        adminPolicyDocument: app.adminPolicyDocument,
-        status: app.status,
+        status: app.status || "pending",
+        adminPolicyDocument: app.adminPolicyDocument || null,
       },
     });
 
