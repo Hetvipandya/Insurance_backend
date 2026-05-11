@@ -4,11 +4,11 @@ const Executive = require("../models/Executive");
 // ================= CREATE =================
 exports.createApplication = async (req, res) => {
   try {
-    const { carNo, tp, otherDetails } = req.body;
+    const { carNo, tp, otherDetails, mobileNo } = req.body;
 
     const userId = req.user?.id;
 
-    if (!userId) {
+    if (!userId) { 
       return res.status(401).json({
         message: "Unauthorized",
       });
@@ -80,7 +80,7 @@ exports.createApplication = async (req, res) => {
       user: userId,
       carNo,
       tp,
-
+      mobileNo,
       rcBookImages,
       aadharCardImages,
       panCardImages,

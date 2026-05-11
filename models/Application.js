@@ -20,6 +20,12 @@ const applicationSchema = new mongoose.Schema(
       trim: true,
     },
 
+    mobileNo: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
     rcBookImages: {
       type: [String],
       required: true,
