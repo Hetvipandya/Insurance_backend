@@ -238,6 +238,9 @@ exports.getApplicationById = async (req, res) => {
 // ================= UPDATE =================
 exports.updateApplication = async (req, res) => {
   try {
+    console.log("BODY:", req.body);
+    console.log("FILES:", req.files);
+
     const application = await Application.findById(req.params.id);
 
     if (!application) {
@@ -246,29 +249,38 @@ exports.updateApplication = async (req, res) => {
       });
     }
 
-    // STATUS UPDATE
+    // ================= STATUS UPDATE =================
     if (req.body.status) {
       application.status = req.body.status;
     }
 
-    // PDF / POLICY DOCUMENT
-    if (req.files?.adminPolicyDocument) {
+    // ================= POLICY DOCUMENT =================
+    if (
+      req.files &&
+      req.files.adminPolicyDocument &&
+      req.files.adminPolicyDocument.length > 0
+    ) {
+      const file =
+        req.files.adminPolicyDocument[0];
+
       application.adminPolicyDocument =
-        req.files.adminPolicyDocument[0].path;
+        `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
     }
 
+    // ================= SAVE =================
     await application.save();
 
     res.status(200).json({
       success: true,
+      message: "Application updated successfully",
       data: application,
     });
 
   } catch (error) {
-    console.log(error);
+    console.log("UPDATE APPLICATION ERROR:", error);
 
     res.status(500).json({
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
