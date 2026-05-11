@@ -21,10 +21,14 @@ exports.createExecutive = async (req, res) => {
 
 exports.loginExecutive = async (req, res) => {
   try {
-    const { Email, password } = req.body;
+    const { Name, Email, password, mobileNo } = req.body;
 
-    // Find executive
-    const executive = await Executive.findOne({ Email });
+    // Find executive with all details
+    const executive = await Executive.findOne({
+      Name,
+      Email,
+      mobileNo,
+    });
 
     if (!executive) {
       return res.status(404).json({
@@ -61,7 +65,10 @@ exports.loginExecutive = async (req, res) => {
       token,
       executive,
     });
+
   } catch (error) {
+    console.log(error);
+
     res.status(500).json({
       message: "Login error",
       error,
