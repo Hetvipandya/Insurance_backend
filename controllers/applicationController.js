@@ -1,123 +1,116 @@
 const Application = require("../models/Application");
-const cloudinary = require("cloudinary").v2;
-
-// ================= CLOUDINARY CONFIG =================
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-// ================= UPLOAD TO CLOUDINARY =================
-const getCloudinaryResourceType = (originalname = "") => {
-  const extension = originalname.split(".").pop()?.toLowerCase();
-  return extension === "pdf" ? "raw" : "auto";
-};
-
-const uploadBufferToCloudinary = (buffer, originalname) => {
-  return new Promise((resolve, reject) => {
-    const resourceType = getCloudinaryResourceType(originalname);
-    const extension = originalname.split(".").pop()?.toLowerCase();
-    const publicId = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: "insurance-applications",
-        resource_type: resourceType,
-        public_id: resourceType === "raw" && extension ? `${publicId}.${extension}` : publicId,
-        overwrite: true,
-      },
-      (error, result) => {
-        if (error) {
-          console.error("Cloudinary upload error:", error);
-          return reject(error);
-        }
-        resolve(result.secure_url);
-      }
-    );
-
-    uploadStream.end(buffer);
-  });
-};
-
 // ================= CREATE =================
 exports.createApplication = async (req, res) => {
   try {
     const { carNo, tp, otherDetails } = req.body;
+
     const userId = req.user?.id;
 
     if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
     }
 
-    if (req.files?.adminPolicyDocument && req.user.role !== "admin") {
-      return res.status(403).json({ message: "Only admin can upload policy document" });
+    // ================= ADMIN CHECK =================
+    if (
+      req.files?.adminPolicyDocument &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({
+        message: "Only admin can upload policy document",
+      });
     }
 
+    // ================= GET FILE PATHS =================
     const rcBookImages = req.files?.rcBookImages
-      ? await Promise.all(req.files.rcBookImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname)))
+      ? req.files.rcBookImages.map(
+          (file) => `/uploads/${file.filename}`
+        )
       : [];
 
     const aadharCardImages = req.files?.aadharCardImages
-      ? await Promise.all(req.files.aadharCardImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname)))
+      ? req.files.aadharCardImages.map(
+          (file) => `/uploads/${file.filename}`
+        )
       : [];
 
     const panCardImages = req.files?.panCardImages
-      ? await Promise.all(req.files.panCardImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname)))
+      ? req.files.panCardImages.map(
+          (file) => `/uploads/${file.filename}`
+        )
       : [];
 
     const oldPolicyImages = req.files?.oldPolicyImages
-      ? await Promise.all(req.files.oldPolicyImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname)))
+      ? req.files.oldPolicyImages.map(
+          (file) => `/uploads/${file.filename}`
+        )
       : [];
 
     const otherImages = req.files?.otherImages
-      ? await Promise.all(req.files.otherImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname)))
+      ? req.files.otherImages.map(
+          (file) => `/uploads/${file.filename}`
+        )
       : [];
 
     const adminPolicyDocument = req.files?.adminPolicyDocument
-      ? await uploadBufferToCloudinary(req.files.adminPolicyDocument[0].buffer, req.files.adminPolicyDocument[0].originalname)
+      ? `/uploads/${req.files.adminPolicyDocument[0].filename}`
       : null;
 
+    // ================= VALIDATION =================
     if (!carNo || !tp) {
-      return res.status(400).json({ message: "carNo & tp required" });
+      return res.status(400).json({
+        message: "carNo & tp required",
+      });
     }
 
-    if (!rcBookImages.length || !aadharCardImages.length) {
+    if (
+      !rcBookImages.length ||
+      !aadharCardImages.length
+    ) {
       return res.status(400).json({
         message: "RC Book & Aadhar images required",
       });
     }
 
+    // ================= CREATE APPLICATION =================
     const app = await Application.create({
       user: userId,
       carNo,
       tp,
+
       rcBookImages,
       aadharCardImages,
       panCardImages,
       oldPolicyImages,
       otherImages,
+
       otherDetails,
+
       adminPolicyDocument,
+
       status: "pending",
     });
 
+    // ================= RESPONSE =================
     res.status(201).json({
       message: "Application created",
+
       data: {
         ...app.toObject(),
+
         status: app.status || "pending",
-        adminPolicyDocument: app.adminPolicyDocument || null,
+
+        adminPolicyDocument:
+          app.adminPolicyDocument || null,
       },
     });
-
   } catch (err) {
-    if (err.message.includes("Only JPG")) {
-      return res.status(400).json({ message: err.message });
-    }
-
     console.error(err);
-    res.status(500).json({ message: "Server Error" });
+
+    res.status(500).json({
+      message: "Server Error",
+    });
   }
 };
 
@@ -172,6 +165,59 @@ exports.getAllApplicationsForAdmin = async (req, res) => {
     res.status(500).json({ message: "Server Error", error: err.message });
   }
 };
+
+exports.assignExecutive = async (req, res) => {
+  try {
+    const { applicationId, executiveId } = req.body;
+
+    const updatedApplication = await Application.findByIdAndUpdate(
+      applicationId,
+      {
+        executive: executiveId,
+      },
+      { new: true }
+    )
+      .populate("executive", "name email")
+      .populate("user", "fullName");
+
+    res.status(200).json({
+      message: "Executive assigned successfully",
+      application: updatedApplication,
+    });
+  } catch (err) {
+    console.error("Assign Executive Error:", err);
+
+    res.status(500).json({
+      message: "Server Error",
+      error: err.message,
+    });
+  }
+};
+
+exports.getApplicationByExecutive = async (req, res) => {
+  try {
+    const executiveId = req.params.id;
+
+    const apps = await Application.find({
+      executive: executiveId,
+    })
+      .populate("user", "fullName emailId mobileNumber")
+      .sort({ createdAt: -1 });
+
+    res.json(apps);
+  } catch (err) {
+    console.error(
+      "Error fetching applications for executive:",
+      err
+    );
+
+    res.status(500).json({
+      message: "Server Error",
+      error: err.message,
+    });
+  }
+};
+
 
 // ================= GET SINGLE =================
 exports.getApplicationById = async (req, res) => {

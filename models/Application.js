@@ -9,6 +9,11 @@ const applicationSchema = new mongoose.Schema(
       required: true,
     },
 
+    executive: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User",
+},
+
     // 🔹 Car Number
     carNo: {
       type: String,

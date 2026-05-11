@@ -9,6 +9,8 @@ const {
   getMyApplications,
   getAllApplicationsForAdmin,
   getApplicationById,
+  getApplicationByExecutive,
+  assignExecutive,
   updateApplication,
   deleteApplication,
 } = require("../controllers/applicationController");
@@ -26,6 +28,12 @@ router.post("/create", authMiddleware, uploadFields, createApplication);
 router.get("/my", authMiddleware, getMyApplications);
 router.get("/admin", authMiddleware, getAllApplicationsForAdmin);
 router.get("/:id", authMiddleware, getApplicationById);
+router.get("/executive/:id", authMiddleware, getApplicationByExecutive);
+router.put(
+  "/assign-executive",
+  authMiddleware,
+  assignExecutive
+);
 router.put("/update/:id", authMiddleware, uploadFields, updateApplication);
 router.delete("/delete/:id", authMiddleware, deleteApplication);
 

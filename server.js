@@ -55,21 +55,15 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const cloudinary = require('cloudinary').v2; // ✅ ADD
 const User = require('./models/User');
+const path = require("path");
 
 const userRoutes = require("./routes/userRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
+const executiveRoutes = require("./routes/executiveRoutees"); 
 
 const app = express();
 
 
-// ✅ CLOUDINARY CONFIG (ONLY ADD THIS BLOCK)
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-console.log("☁️ Cloudinary Config Loaded");
 
 async function ensureAdminUser() {
   const emailId = process.env.ADMIN_EMAIL || 'admin10@gmail.com';
@@ -113,10 +107,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"))
+);
 
 // ✅ ROUTES
 app.use("/api/user", userRoutes);
 app.use("/api/application", applicationRoutes);
+app.use('/api/executive', executiveRoutes); 
 
 
 // Test route

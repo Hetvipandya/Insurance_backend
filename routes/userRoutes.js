@@ -8,7 +8,7 @@ const { authMiddleware } = require("../middleware/auth");
 
 // Register with profile image
 router.post(
-  "/register",
+  "/register", 
   upload.single("profileImage"), 
   authController.registerUser
 );
