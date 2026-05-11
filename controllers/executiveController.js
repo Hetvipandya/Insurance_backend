@@ -1,5 +1,6 @@
 const Executive = require("../models/Executive");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 exports.createExecutive = async (req, res) => {
     try {
@@ -16,6 +17,56 @@ exports.createExecutive = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: "Error creating executive", error });
     }
+};
+
+exports.loginExecutive = async (req, res) => {
+  try {
+    const { Email, password } = req.body;
+
+    // Find executive
+    const executive = await Executive.findOne({ Email });
+
+    if (!executive) {
+      return res.status(404).json({
+        message: "Executive not found",
+      });
+    }
+
+    // Compare password
+    const isMatch = await bcrypt.compare(
+      password,
+      executive.password
+    );
+
+    if (!isMatch) {
+      return res.status(401).json({
+        message: "Invalid password",
+      });
+    }
+
+    // Generate token
+    const token = jwt.sign(
+      {
+        id: executive._id,
+        Email: executive.Email,
+      },
+      "mySecretKey",
+      {
+        expiresIn: "7d",
+      }
+    );
+
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      executive,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Login error",
+      error,
+    });
+  }
 };
 
 exports.getExecutives = async (req, res) => {
