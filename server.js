@@ -63,7 +63,8 @@ const executiveRoutes = require("./routes/executiveRoutees");
 
 const app = express();
 
-
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 async function ensureAdminUser() {
   const emailId = process.env.ADMIN_EMAIL || 'admin10@gmail.com';

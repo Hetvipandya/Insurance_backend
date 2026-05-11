@@ -10,7 +10,7 @@ exports.registerUser = async (req, res) => {
       emailId,
       mobileNumber,
       address,
-      password,
+      password, 
       confirmPassword,
     } = req.body;
 
