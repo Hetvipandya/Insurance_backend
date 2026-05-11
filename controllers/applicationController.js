@@ -1,4 +1,6 @@
 const Application = require("../models/Application");
+const Executive = require("../models/executiveModel");
+
 // ================= CREATE =================
 exports.createApplication = async (req, res) => {
   try {
@@ -171,6 +173,7 @@ exports.assignExecutive = async (req, res) => {
     const { id } = req.params;
     const { executiveId } = req.body;
 
+    // application update
     const updatedApplication = await Application.findByIdAndUpdate(
       id,
       {
@@ -179,12 +182,27 @@ exports.assignExecutive = async (req, res) => {
       { new: true }
     );
 
+    // executive update
+    await Executive.findByIdAndUpdate(
+      executiveId,
+      {
+        $addToSet: {
+          assignedApplications: id,
+        },
+      },
+      { new: true }
+    );
+
     res.status(200).json({
-      message: "Executive assigned successfully",
+      success: true,
+      message: "Executive Assigned Successfully",
       updatedApplication,
     });
   } catch (error) {
+    console.log(error);
+
     res.status(500).json({
+      success: false,
       message: error.message,
     });
   }
