@@ -268,14 +268,29 @@ exports.updateApplication = async (req, res) => {
       application.status = req.body.status;
     }
 
+    // ================= EXECUTIVE ASSIGN =================
+    if (req.body.executiveId) {
+      application.executive = req.body.executiveId;
+
+      // executive ma application id add karo
+      await Executive.findByIdAndUpdate(
+        req.body.executiveId,
+        {
+          $addToSet: {
+            assignedApplications: application._id,
+          },
+        },
+        { new: true }
+      );
+    }
+
     // ================= POLICY DOCUMENT =================
     if (
       req.files &&
       req.files.adminPolicyDocument &&
       req.files.adminPolicyDocument.length > 0
     ) {
-      const file =
-        req.files.adminPolicyDocument[0];
+      const file = req.files.adminPolicyDocument[0];
 
       application.adminPolicyDocument =
         `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
