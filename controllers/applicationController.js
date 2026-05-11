@@ -1,5 +1,5 @@
 const Application = require("../models/Application");
-const Executive = require("../models/executiveModel");
+const Executive = require("../models/Executive");
 
 // ================= CREATE =================
 exports.createApplication = async (req, res) => {
