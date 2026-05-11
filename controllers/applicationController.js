@@ -173,16 +173,32 @@ exports.assignExecutive = async (req, res) => {
     const { id } = req.params;
     const { executiveId } = req.body;
 
-    // application update
-    const updatedApplication = await Application.findByIdAndUpdate(
-      id,
-      {
-        assignedExecutive: executiveId,
-      },
-      { new: true }
-    );
+    // ================= UPDATE APPLICATION =================
+    const updatedApplication =
+      await Application.findByIdAndUpdate(
+        id,
+        {
+          executive: executiveId,
+        },
+        { new: true }
+      )
+        .populate(
+          "user",
+          "fullName emailId mobileNumber"
+        )
+        .populate(
+          "executive",
+          "Name emailId mobileNumber"
+        );
 
-    // executive update
+    if (!updatedApplication) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    // ================= UPDATE EXECUTIVE =================
     await Executive.findByIdAndUpdate(
       executiveId,
       {
@@ -196,10 +212,11 @@ exports.assignExecutive = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Executive Assigned Successfully",
-      updatedApplication,
+      data: updatedApplication,
     });
+
   } catch (error) {
-    console.log(error);
+    console.log("ASSIGN EXECUTIVE ERROR:", error);
 
     res.status(500).json({
       success: false,
