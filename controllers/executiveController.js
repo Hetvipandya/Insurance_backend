@@ -21,14 +21,9 @@ exports.createExecutive = async (req, res) => {
 
 exports.loginExecutive = async (req, res) => {
   try {
-    const { Name, Email, password, mobileNo } = req.body;
+    const { Name, Email, mobileNo, password } = req.body;
 
-    // Find executive with all details
-    const executive = await Executive.findOne({
-      Name,
-      Email,
-      mobileNo,
-    });
+    const executive = await Executive.findOne({ Email });
 
     if (!executive) {
       return res.status(404).json({
@@ -36,7 +31,18 @@ exports.loginExecutive = async (req, res) => {
       });
     }
 
-    // Compare password
+    if (executive.Name !== Name) {
+      return res.status(401).json({
+        message: "Invalid Name",
+      });
+    }
+
+    if (executive.mobileNo !== mobileNo) {
+      return res.status(401).json({
+        message: "Invalid Mobile Number",
+      });
+    }
+
     const isMatch = await bcrypt.compare(
       password,
       executive.password
@@ -44,11 +50,10 @@ exports.loginExecutive = async (req, res) => {
 
     if (!isMatch) {
       return res.status(401).json({
-        message: "Invalid password",
+        message: "Invalid Password",
       });
     }
 
-    // Generate token
     const token = jwt.sign(
       {
         id: executive._id,
