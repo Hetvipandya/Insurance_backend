@@ -238,83 +238,38 @@ exports.getApplicationById = async (req, res) => {
 // ================= UPDATE =================
 exports.updateApplication = async (req, res) => {
   try {
-    const { carNo, tp, otherDetails, status } = req.body;
+    const application = await Application.findById(req.params.id);
 
-    const app = await Application.findById(req.params.id);
-
-    if (!app) {
-      return res.status(404).json({ message: "Not found" });
+    if (!application) {
+      return res.status(404).json({
+        message: "Application not found",
+      });
     }
 
-    if (carNo) app.carNo = carNo;
-    if (tp) app.tp = tp;
-    if (otherDetails) app.otherDetails = otherDetails;
-
-    if (status) {
-      if (req.user.role !== "admin") {
-        return res.status(403).json({ message: "Only admin can update status" });
-      }
-
-      const allowedStatuses = ["pending", "approved", "rejected"];
-      if (!allowedStatuses.includes(status)) {
-        return res.status(400).json({ message: "Invalid status value" });
-      }
-
-      app.status = status;
+    // STATUS UPDATE
+    if (req.body.status) {
+      application.status = req.body.status;
     }
 
-    if (req.files?.adminPolicyDocument?.length) {
-      if (req.user.role !== "admin") {
-        return res.status(403).json({ message: "Only admin can upload policy document" });
-      }
-
-      app.adminPolicyDocument = await uploadBufferToCloudinary(
-        req.files.adminPolicyDocument[0].buffer,
-        req.files.adminPolicyDocument[0].originalname
-      );
+    // PDF / POLICY DOCUMENT
+    if (req.files?.adminPolicyDocument) {
+      application.adminPolicyDocument =
+        req.files.adminPolicyDocument[0].path;
     }
 
-    if (req.files?.rcBookImages?.length) {
-      app.rcBookImages = await Promise.all(
-        req.files.rcBookImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname))
-      );
-    }
+    await application.save();
 
-    if (req.files?.aadharCardImages?.length) {
-      app.aadharCardImages = await Promise.all(
-        req.files.aadharCardImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname))
-      );
-    }
-
-    if (req.files?.panCardImages?.length) {
-      app.panCardImages = await Promise.all(
-        req.files.panCardImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname))
-      );
-    }
-
-    if (req.files?.oldPolicyImages?.length) {
-      app.oldPolicyImages = await Promise.all(
-        req.files.oldPolicyImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname))
-      );
-    }
-
-    if (req.files?.otherImages?.length) {
-      app.otherImages = await Promise.all(
-        req.files.otherImages.map(f => uploadBufferToCloudinary(f.buffer, f.originalname))
-      );
-    }
-
-    await app.save();
-
-    const updatedApp = await Application.findById(app._id)
-      .populate("user", "fullName emailId mobileNumber");
-
-    res.json({
-      message: "Application updated",
-      data: updatedApp,
+    res.status(200).json({
+      success: true,
+      data: application,
     });
-  } catch (err) {
-    res.status(500).json({ message: "Server Error" });
+
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      message: "Server Error",
+    });
   }
 };
 
