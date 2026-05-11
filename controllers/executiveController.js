@@ -2,45 +2,20 @@ const Executive = require("../models/Executive");
 const bcrypt = require("bcryptjs");
 
 exports.createExecutive = async (req, res) => {
-  try {
-    const { Name, Email, password, mobileNo } = req.body;
-
-    // Check existing executive
-    const existingExecutive = await Executive.findOne({
-      $or: [{ Email }, { mobileNo }],
-    });
-
-    if (existingExecutive) {
-      return res.status(400).json({
-        message: "Executive already exists",
-      });
+    try {
+        const { Name, Email, password, mobileNo } = req.body;
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const executive = new Executive({
+            Name,
+            Email,
+            password: hashedPassword,
+            mobileNo
+        });
+        await executive.save();
+        res.status(201).json({ message: "Executive created successfully", executive });
+    } catch (error) {
+        res.status(500).json({ message: "Error creating executive", error });
     }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create executive
-    const executive = new Executive({
-      Name,
-      Email,
-      password: hashedPassword,
-      mobileNo,
-    });
-
-    await executive.save();
-
-    res.status(201).json({
-      message: "Executive created successfully",
-      executive,
-    });
-  } catch (error) {
-    console.log(error);
-
-    res.status(500).json({
-      message: "Error creating executive",
-      error: error.message,
-    });
-  }
 };
 
 exports.getExecutives = async (req, res) => {

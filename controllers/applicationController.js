@@ -168,28 +168,24 @@ exports.getAllApplicationsForAdmin = async (req, res) => {
 
 exports.assignExecutive = async (req, res) => {
   try {
-    const { applicationId, executiveId } = req.body;
+    const { id } = req.params;
+    const { executiveId } = req.body;
 
     const updatedApplication = await Application.findByIdAndUpdate(
-      applicationId,
+      id,
       {
-        executive: executiveId,
+        assignedExecutive: executiveId,
       },
       { new: true }
-    )
-      .populate("executive", "name email")
-      .populate("user", "fullName");
+    );
 
     res.status(200).json({
       message: "Executive assigned successfully",
-      application: updatedApplication,
+      updatedApplication,
     });
-  } catch (err) {
-    console.error("Assign Executive Error:", err);
-
+  } catch (error) {
     res.status(500).json({
-      message: "Server Error",
-      error: err.message,
+      message: error.message,
     });
   }
 };

@@ -30,7 +30,7 @@ router.get("/admin", authMiddleware, getAllApplicationsForAdmin);
 router.get("/:id", authMiddleware, getApplicationById);
 router.get("/executive/:id", authMiddleware, getApplicationByExecutive);
 router.put(
-  "/assign-executive",
+  "/assign-executive/:id",
   authMiddleware,
   assignExecutive
 );
