@@ -6,7 +6,6 @@ const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    // ================= CHECK TOKEN =================
     if (!authHeader) {
       return res.status(401).json({
         message: "Access denied. No token provided",
@@ -27,40 +26,33 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    // ================= VERIFY TOKEN =================
+    // SAME SECRET KEY
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET || "mySecretKey"
     );
 
     let role = decoded.role;
-    let userData = null;
 
-    // ================= FIND USER =================
     if (!role) {
+      let user = await User.findById(decoded.id);
 
-      // Check in User model
-      userData = await User.findById(decoded.id).select("role");
-
-      // If not found in User then check Executive
-      if (!userData) {
-        userData = await Executive.findById(decoded.id).select("_id");
+      if (!user) {
+        user = await Executive.findById(decoded.id);
       }
 
-      if (!userData) {
+      if (!user) {
         return res.status(401).json({
           message: "User not found",
         });
       }
 
-      role = userData.role || "executive";
+      role = user.role || "executive";
     }
 
-    // ================= SAVE USER DATA =================
     req.user = {
       id: decoded.id,
       role,
-      registrationType: decoded.registrationType || null,
     };
 
     next();

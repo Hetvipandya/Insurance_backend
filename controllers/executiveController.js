@@ -60,16 +60,17 @@ exports.loginExecutive = async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      {
-        id: executive._id,
-        Email: executive.Email,
-      },
-      "mySecretKey",
-      {
-        expiresIn: "7d",
-      }
-    );
+   const token = jwt.sign(
+  {
+    id: executive._id,
+    Email: executive.Email,
+    role: "executive",
+  },
+  process.env.JWT_SECRET || "mySecretKey",
+  {
+    expiresIn: "7d",
+  }
+);
 
     res.status(200).json({
       message: "Login successful",
