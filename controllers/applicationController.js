@@ -129,8 +129,9 @@ exports.getMyApplications = async (req, res) => {
     // ✅ Admin → ALL applications
     if (userRole === "admin") {
       apps = await Application.find()
-        .populate("user", "fullName emailId mobileNumber")
-        .sort({ createdAt: -1 });
+  .populate("user", "fullName emailId mobileNumber")
+  .populate("executive", "Name emailId mobileNumber")
+  .sort({ createdAt: -1 });
     } 
     // ✅ Normal user → Only own applications
     else {
@@ -183,14 +184,8 @@ exports.assignExecutive = async (req, res) => {
         },
         { new: true }
       )
-        .populate(
-          "user",
-          "fullName emailId mobileNumber"
-        )
-        .populate(
-          "executive",
-          "fullName emailId mobileNumber"
-        );
+  .populate("user", "fullName emailId mobileNumber")
+  .populate("executive", "Name emailId mobileNumber");
 
     if (!updatedApplication) {
       return res.status(404).json({
@@ -256,7 +251,7 @@ exports.getApplicationById = async (req, res) => {
   try {
 const app = await Application.findById(req.params.id)
   .populate("user", "fullName emailId mobileNumber")
-  .populate("executive", "fullName emailId mobileNumber");
+  .populate("executive", "Name emailId mobileNumber");
 
     if (!app) {
       return res.status(404).json({ message: "Not found" });
