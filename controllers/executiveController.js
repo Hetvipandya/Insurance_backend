@@ -23,6 +23,12 @@ exports.loginExecutive = async (req, res) => {
   try {
     const { Name, Email, mobileNo, password } = req.body;
 
+    if (!Name || !Email || !mobileNo || !password) {
+      return res.status(400).json({
+        message: "All fields are required",
+      });
+    }
+
     const executive = await Executive.findOne({ Email });
 
     if (!executive) {

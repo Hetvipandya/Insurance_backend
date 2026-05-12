@@ -8,7 +8,7 @@ const {
   getExecutiveById,
   updateExecutive,
   deleteExecutive,
-} = require("../controllers/executiveController");
+} = require("../controllers/executiveController"); 
 
 router.post("/create", createExecutive);
 router.post("/login", loginExecutive);
