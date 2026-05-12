@@ -311,13 +311,17 @@ exports.updateApplication = async (req, res) => {
     }
 
     // ================= SAVE =================
-    await application.save();
+   await application.save();
 
-    res.status(200).json({
-      success: true,
-      message: "Application updated successfully",
-      data: application,
-    });
+const updatedApplication = await Application.findById(application._id)
+  .populate("user", "fullName emailId mobileNumber")
+  .populate("executive", "Name emailId mobileNumber");
+
+res.status(200).json({
+  success: true,
+  message: "Application updated successfully",
+  data: updatedApplication,
+});
 
   } catch (error) {
     console.log("UPDATE APPLICATION ERROR:", error);
