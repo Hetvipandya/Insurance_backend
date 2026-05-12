@@ -118,6 +118,47 @@ exports.createApplication = async (req, res) => {
 
 // ================= GET ALL (User wise) =================
 // ================= GET ALL (User wise + Admin) =================
+exports.getAllApplicationsForAdmin = async (req, res) => {
+  try {
+    console.log("USER =>", req.user);
+
+    // ================= ADMIN =================
+    if (req.user.role === "admin") {
+      const apps = await Application.find()
+        .populate("user", "fullName emailId mobileNumber")
+        .populate("executive", "Name Email mobileNo")
+        .sort({ createdAt: -1 });
+
+      return res.status(200).json(apps);
+    }
+
+    // ================= EXECUTIVE =================
+    if (req.user.role === "executive") {
+      const apps = await Application.find({
+        executive: req.user.id,
+      })
+        .populate("user", "fullName emailId mobileNumber")
+        .populate("executive", "Name Email mobileNo")
+        .sort({ createdAt: -1 });
+
+      return res.status(200).json(apps);
+    }
+
+    // ================= OTHER USERS =================
+    return res.status(403).json({
+      message: "Access denied",
+    });
+
+  } catch (err) {
+    console.error("APPLICATION FETCH ERROR =>", err);
+
+    res.status(500).json({
+      message: "Server Error",
+      error: err.message,
+    });
+  }
+};
+
 exports.getMyApplications = async (req, res) => {
   try {
     const userId = req.user.id;
