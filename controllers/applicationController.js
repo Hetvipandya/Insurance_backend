@@ -189,7 +189,7 @@ exports.assignExecutive = async (req, res) => {
         )
         .populate(
           "executive",
-          "Name emailId mobileNumber"
+          "fullName emailId mobileNumber"
         );
 
     if (!updatedApplication) {
@@ -254,8 +254,9 @@ exports.getApplicationByExecutive = async (req, res) => {
 // ================= GET SINGLE =================
 exports.getApplicationById = async (req, res) => {
   try {
-    const app = await Application.findById(req.params.id)
-      .populate("user", "fullName emailId mobileNumber");
+const app = await Application.findById(req.params.id)
+  .populate("user", "fullName emailId mobileNumber")
+  .populate("executive", "fullName emailId mobileNumber");
 
     if (!app) {
       return res.status(404).json({ message: "Not found" });
