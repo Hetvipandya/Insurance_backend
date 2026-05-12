@@ -53,7 +53,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
-const cloudinary = require('cloudinary').v2; // ✅ ADD
 const User = require('./models/User');
 const path = require("path");
 
