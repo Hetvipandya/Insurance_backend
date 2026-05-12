@@ -7,7 +7,7 @@ const { authMiddleware } = require("../middleware/auth");
 const {
   createApplication,
   getMyApplications,
-  getAllApplicationsForAdmin,
+  getAllApplicationsForAdmin, 
   getApplicationById,
   getApplicationByExecutive,
   assignExecutive,
