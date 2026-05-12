@@ -190,55 +190,24 @@ exports.getMyApplications = async (req, res) => {
 // ================= GET ALL FOR ADMIN =================
 exports.getAllApplicationsForAdmin = async (req, res) => {
   try {
-    const role = req.user.role;
+    console.log("Admin route called, user role:", req.user.role);
 
-    // ADMIN
-    if (role === "admin") {
-      const apps = await Application.find()
-        .populate("user", "fullName emailId mobileNumber")
-        .populate("executive", "Name Email mobileNo")
-        .sort({ createdAt: -1 });
-
-      return res.status(200).json({ data: apps });
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
     }
 
-    // EXECUTIVE
-    if (role === "executive") {
-      const apps = await Application.find({
-        executive: req.user.id,
-      })
-        .populate("user", "fullName emailId mobileNumber")
-        .sort({ createdAt: -1 });
+    console.log("Fetching applications...");
+    const apps = await Application.find()
+      .populate("user", "fullName emailId mobileNumber")
+      .sort({ createdAt: -1 });
 
-      return res.status(200).json({ data: apps });
-    }
-
-    return res.status(403).json({ message: "Access denied" });
-
+    console.log("Found applications:", apps.length);
+    res.json(apps);
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    console.error("Error fetching all applications for admin:", err);
+    res.status(500).json({ message: "Server Error", error: err.message });
   }
 };
-// exports.getAllApplicationsForAdmin = async (req, res) => {
-//   try {
-//     console.log("Admin route called, user role:", req.user.role);
-
-//     if (req.user.role !== "admin") {
-//       return res.status(403).json({ message: "Access denied" });
-//     }
-
-//     console.log("Fetching applications...");
-//     const apps = await Application.find()
-//       .populate("user", "fullName emailId mobileNumber")
-//       .sort({ createdAt: -1 });
-
-//     console.log("Found applications:", apps.length);
-//     res.json(apps);
-//   } catch (err) {
-//     console.error("Error fetching all applications for admin:", err);
-//     res.status(500).json({ message: "Server Error", error: err.message });
-//   }
-// };
 
 exports.assignExecutive = async (req, res) => {
   try {
