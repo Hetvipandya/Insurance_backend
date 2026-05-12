@@ -21,11 +21,11 @@ exports.createExecutive = async (req, res) => {
 
 exports.loginExecutive = async (req, res) => {
   try {
-    const { Name, Email, mobileNo, password } = req.body;
+    const { Email, password } = req.body;
 
-    if (!Name || !Email || !mobileNo || !password) {
+    if (!Email || !password) {
       return res.status(400).json({
-        message: "All fields are required",
+        message: "Email and Password are required",
       });
     }
 
@@ -37,22 +37,7 @@ exports.loginExecutive = async (req, res) => {
       });
     }
 
-    if (executive.Name !== Name) {
-      return res.status(401).json({
-        message: "Invalid Name",
-      });
-    }
-
-    if (executive.mobileNo !== mobileNo) {
-      return res.status(401).json({
-        message: "Invalid Mobile Number",
-      });
-    }
-
-    const isMatch = await bcrypt.compare(
-      password,
-      executive.password
-    );
+    const isMatch = await bcrypt.compare(password, executive.password);
 
     if (!isMatch) {
       return res.status(401).json({
@@ -60,19 +45,17 @@ exports.loginExecutive = async (req, res) => {
       });
     }
 
-   const token = jwt.sign(
-  {
-    id: executive._id,
-    Email: executive.Email,
-    role: "executive",
-  },
-  process.env.JWT_SECRET || "mySecretKey",
-  {
-    expiresIn: "7d",
-  }
-);
+    const token = jwt.sign(
+      {
+        id: executive._id,
+        Email: executive.Email,
+        role: "executive",
+      },
+      process.env.JWT_SECRET || "mySecretKey",
+      { expiresIn: "7d" }
+    );
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Login successful",
       token,
       executive,
@@ -80,8 +63,7 @@ exports.loginExecutive = async (req, res) => {
 
   } catch (error) {
     console.log(error);
-
-    res.status(500).json({
+    return res.status(500).json({
       message: "Login error",
       error,
     });
