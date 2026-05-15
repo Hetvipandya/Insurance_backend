@@ -9,8 +9,8 @@ const { authMiddleware } = require("../middleware/auth");
 // Register with profile image
 router.post(
   "/register", 
-  upload.single("profileImage"), 
-  authController.registerUser
+  upload.single("profileImage"),  
+  authController.registerUser 
 );
 
 // Login
@@ -25,4 +25,4 @@ router.delete("/delete/:id", authController.deleteUser);
 // ================= USER PROFILE =================
 router.get("/profile/:id", authMiddleware, authController.getUserById);
 
-module.exports = router;
+module.exports = router; 
