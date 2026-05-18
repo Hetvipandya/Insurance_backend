@@ -14,7 +14,7 @@ router.post(
 );
 
 // Login
-router.post("/login", authController.loginUser);
+router.post("/login", authController.loginUser); 
 
 // ================= ADMIN =================
 router.get("/dealers", authController.getAllDealers);

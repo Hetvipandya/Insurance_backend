@@ -273,6 +273,7 @@ exports.updateApplication = async (req, res) => {
 
     if (!application) {
       return res.status(404).json({
+        success: false,
         message: "Application not found",
       });
     }
@@ -286,7 +287,7 @@ exports.updateApplication = async (req, res) => {
     if (req.body.executiveId) {
       application.executive = req.body.executiveId;
 
-      // executive ma application id add karo
+      // Executive ma application add
       await Executive.findByIdAndUpdate(
         req.body.executiveId,
         {
@@ -298,35 +299,100 @@ exports.updateApplication = async (req, res) => {
       );
     }
 
-    // ================= POLICY DOCUMENT =================
-    if (
-      req.files &&
-      req.files.adminPolicyDocument &&
-      req.files.adminPolicyDocument.length > 0
-    ) {
-      const file = req.files.adminPolicyDocument[0];
+    // ================= USER DETAILS UPDATE =================
+    if (application.user) {
+      const userUpdateData = {};
 
-      application.adminPolicyDocument =
-        `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
+      if (req.body.fullName) {
+        userUpdateData.fullName = req.body.fullName;
+      }
+
+      if (req.body.emailId) {
+        userUpdateData.emailId = req.body.emailId;
+      }
+
+      if (req.body.mobileNumber) {
+        userUpdateData.mobileNumber = req.body.mobileNumber;
+      }
+
+      if (Object.keys(userUpdateData).length > 0) {
+        await User.findByIdAndUpdate(
+          application.user,
+          userUpdateData,
+          { new: true }
+        );
+      }
     }
 
+    // ================= APPLICATION FIELD UPDATE =================
+    const updateFields = [
+      "carNo",
+      "vehicleType",
+      "policyType",
+      "insuranceCompany",
+      "premiumAmount",
+      "registrationNumber",
+      "engineNumber",
+      "chassisNumber",
+      "address",
+      "city",
+      "state",
+      "pincode",
+      "remarks",
+    ];
+
+    updateFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        application[field] = req.body[field];
+      }
+    });
+
+    // ================= DOCUMENT UPDATE =================
+    const documentFields = [
+      "adminPolicyDocument",
+      "rcBook",
+      "insuranceDocument",
+      "aadhaarCard",
+      "panCard",
+      "drivingLicense",
+      "vehicleImage",
+      "otherDocument",
+    ];
+
+    documentFields.forEach((field) => {
+      if (
+        req.files &&
+        req.files[field] &&
+        req.files[field].length > 0
+      ) {
+        const file = req.files[field][0];
+
+        application[field] =
+          `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
+      }
+    });
+
     // ================= SAVE =================
-   await application.save();
+    await application.save();
 
-const updatedApplication = await Application.findById(application._id)
-  .populate("user", "fullName emailId mobileNumber")
-  .populate("executive", "Name emailId mobileNumber");
+    // ================= GET UPDATED DATA =================
+    const updatedApplication = await Application.findById(
+      application._id
+    )
+      .populate("user", "fullName emailId mobileNumber")
+      .populate("executive", "Name emailId mobileNumber");
 
-res.status(200).json({
-  success: true,
-  message: "Application updated successfully",
-  data: updatedApplication,
-});
+    res.status(200).json({
+      success: true,
+      message: "Application updated successfully",
+      data: updatedApplication,
+    });
 
   } catch (error) {
     console.log("UPDATE APPLICATION ERROR:", error);
 
     res.status(500).json({
+      success: false,
       message: error.message || "Server Error",
     });
   }
