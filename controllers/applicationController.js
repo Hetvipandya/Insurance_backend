@@ -1,5 +1,6 @@
 const Application = require("../models/Application");
 const Executive = require("../models/Executive");
+const User = require("../models/User");
 
 // ================= CREATE =================
 exports.createApplication = async (req, res) => {
