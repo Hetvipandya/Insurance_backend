@@ -50,7 +50,7 @@ const authMiddleware = async (req, res, next) => {
       role = user.role || "executive";
     }
 
-    req.user = {
+    req.user = { 
       id: decoded.id,
       role,
     };
