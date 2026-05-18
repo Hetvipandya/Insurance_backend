@@ -99,47 +99,29 @@ const authMiddleware = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "mySecretKey"
-    );
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    let role = decoded.role;
+    let user = await User.findById(decoded.id).select("-password");
 
-    // Find user if role missing
-    if (!role) {
-      let user = await User.findById(decoded.id);
-
-      if (!user) {
-        user = await Executive.findById(decoded.id);
-      }
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          message: "User not found",
-        });
-      }
-
-      role = user.role || "executive";
+    if (!user) {
+      user = await Executive.findById(decoded.id).select("-password");
     }
 
-    req.user = {
-      id: decoded.id,
-      role,
-    };
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
-    return next(); // important
-  } catch (err) {
-    console.log("AUTH ERROR:", err);
+    req.user = user;
 
+    next(); // ✅ Important
+  } catch (error) {
     return res.status(401).json({
       success: false,
-      message:
-        err.name === "TokenExpiredError"
-          ? "Token expired"
-          : "Invalid token",
-      error: err.message,
+      message: "Invalid token",
+      error: error.message,
     });
   }
 };
