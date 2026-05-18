@@ -84,7 +84,7 @@ const applicationSchema = new mongoose.Schema(
 );
 
 // Generate applicationId before saving (format: DDMMYYYYHHMMSS)
-applicationSchema.pre("save", function (next) {
+applicationSchema.pre("save", function () {
   if (!this.applicationId) {
     const now = new Date();
     const day = String(now.getDate()).padStart(2, "0");
@@ -96,7 +96,7 @@ applicationSchema.pre("save", function (next) {
 
     this.applicationId = `${day}${month}${year}${hours}${minutes}${seconds}`;
   }
-  next();
+
 });
 
 module.exports = mongoose.model("Application", applicationSchema);
