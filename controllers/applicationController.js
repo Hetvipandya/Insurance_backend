@@ -278,25 +278,30 @@ exports.updateApplication = async (req, res) => {
     }
 
     // ================= STATUS UPDATE =================
-    if (req.body.status) {
-      application.status = req.body.status;
-    }
+// ================= STATUS UPDATE =================
+if (req.body.status) {
+  application.status = req.body.status;
+}
 
-    // ================= EXECUTIVE ASSIGN =================
-    if (req.body.executiveId) {
-      application.executive = req.body.executiveId;
+// ================= MOBILE NUMBER UPDATE =================
+if (req.body.mobileNo) {
+  application.mobileNo = req.body.mobileNo;
+}
 
-      // executive ma application id add karo
-      await Executive.findByIdAndUpdate(
-        req.body.executiveId,
-        {
-          $addToSet: {
-            assignedApplications: application._id,
-          },
-        },
-        { new: true }
-      );
-    }
+// ================= EXECUTIVE ASSIGN =================
+if (req.body.executiveId) {
+  application.executive = req.body.executiveId;
+
+  await Executive.findByIdAndUpdate(
+    req.body.executiveId,
+    {
+      $addToSet: {
+        assignedApplications: application._id,
+      },
+    },
+    { new: true }
+  );
+}
 
     // ================= POLICY DOCUMENT =================
     if (
