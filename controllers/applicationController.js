@@ -264,11 +264,17 @@ const app = await Application.findById(req.params.id)
 };
 
 // ================= UPDATE =================
+
 exports.updateApplication = async (req, res) => {
   try {
+
+    // SAFE BODY
+    req.body = req.body || {};
+
     console.log("BODY:", req.body);
     console.log("FILES:", req.files);
 
+    // ================= FIND APPLICATION =================
     const application = await Application.findById(req.params.id);
 
     if (!application) {
@@ -279,20 +285,27 @@ exports.updateApplication = async (req, res) => {
     }
 
     // ================= STATUS UPDATE =================
-    if (req.body.status !== undefined) {
+    if (
+      req.body.status !== undefined &&
+      req.body.status.toString().trim() !== ""
+    ) {
       application.status = req.body.status;
     }
 
     // ================= MOBILE NUMBER UPDATE =================
     if (
       req.body.mobileNo !== undefined &&
-      req.body.mobileNo.trim() !== ""
+      req.body.mobileNo.toString().trim() !== ""
     ) {
-      application.mobileNo = req.body.mobileNo;
+      application.mobileNo = req.body.mobileNo.toString();
     }
 
     // ================= EXECUTIVE ASSIGN =================
-    if (req.body.executiveId) {
+    if (
+      req.body.executiveId !== undefined &&
+      req.body.executiveId.toString().trim() !== ""
+    ) {
+
       application.executive = req.body.executiveId;
 
       await Executive.findByIdAndUpdate(
@@ -306,28 +319,115 @@ exports.updateApplication = async (req, res) => {
       );
     }
 
+    // ================= RC BOOK IMAGES =================
+    if (
+      req.files &&
+      req.files.rcBookImages &&
+      req.files.rcBookImages.length > 0
+    ) {
+
+      const rcImages = req.files.rcBookImages.map(
+        (file) => `/uploads/insurance/${file.filename}`
+      );
+
+      application.rcBookImages = [
+        ...(application.rcBookImages || []),
+        ...rcImages,
+      ];
+    }
+
+    // ================= AADHAR CARD IMAGES =================
+    if (
+      req.files &&
+      req.files.aadharCardImages &&
+      req.files.aadharCardImages.length > 0
+    ) {
+
+      const aadharImages = req.files.aadharCardImages.map(
+        (file) => `/uploads/insurance/${file.filename}`
+      );
+
+      application.aadharCardImages = [
+        ...(application.aadharCardImages || []),
+        ...aadharImages,
+      ];
+    }
+
+    // ================= PAN CARD IMAGES =================
+    if (
+      req.files &&
+      req.files.panCardImages &&
+      req.files.panCardImages.length > 0
+    ) {
+
+      const panImages = req.files.panCardImages.map(
+        (file) => `/uploads/insurance/${file.filename}`
+      );
+
+      application.panCardImages = [
+        ...(application.panCardImages || []),
+        ...panImages,
+      ];
+    }
+
+    // ================= OLD POLICY IMAGES =================
+    if (
+      req.files &&
+      req.files.oldPolicyImages &&
+      req.files.oldPolicyImages.length > 0
+    ) {
+
+      const oldPolicyImages = req.files.oldPolicyImages.map(
+        (file) => `/uploads/insurance/${file.filename}`
+      );
+
+      application.oldPolicyImages = [
+        ...(application.oldPolicyImages || []),
+        ...oldPolicyImages,
+      ];
+    }
+
+    // ================= OTHER IMAGES =================
+    if (
+      req.files &&
+      req.files.otherImages &&
+      req.files.otherImages.length > 0
+    ) {
+
+      const otherImages = req.files.otherImages.map(
+        (file) => `/uploads/insurance/${file.filename}`
+      );
+
+      application.otherImages = [
+        ...(application.otherImages || []),
+        ...otherImages,
+      ];
+    }
+
     // ================= POLICY DOCUMENT =================
     if (
       req.files &&
       req.files.adminPolicyDocument &&
       req.files.adminPolicyDocument.length > 0
     ) {
+
       const file = req.files.adminPolicyDocument[0];
 
       application.adminPolicyDocument =
         `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
     }
 
-    // ================= SAVE =================
+    // ================= SAVE APPLICATION =================
     await application.save();
 
-    // ================= UPDATED DATA =================
+    // ================= GET UPDATED APPLICATION =================
     const updatedApplication = await Application.findById(
       application._id
     )
       .populate("user", "fullName emailId mobileNumber")
       .populate("executive", "Name emailId mobileNumber");
 
+    // ================= RESPONSE =================
     return res.status(200).json({
       success: true,
       message: "Application updated successfully",
@@ -335,6 +435,7 @@ exports.updateApplication = async (req, res) => {
     });
 
   } catch (error) {
+
     console.log("UPDATE APPLICATION ERROR:", error);
 
     return res.status(500).json({
@@ -343,6 +444,86 @@ exports.updateApplication = async (req, res) => {
     });
   }
 };
+
+// exports.updateApplication = async (req, res) => {
+//   try {
+//     console.log("BODY:", req.body);
+//     console.log("FILES:", req.files);
+
+//     const application = await Application.findById(req.params.id);
+
+//     if (!application) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Application not found",
+//       });
+//     }
+
+//     // ================= STATUS UPDATE =================
+//     if (req.body.status !== undefined) {
+//       application.status = req.body.status;
+//     }
+
+//     // ================= MOBILE NUMBER UPDATE =================
+//     if (
+//       req.body.mobileNo !== undefined &&
+//       req.body.mobileNo.trim() !== ""
+//     ) {
+//       application.mobileNo = req.body.mobileNo;
+//     }
+
+//     // ================= EXECUTIVE ASSIGN =================
+//     if (req.body.executiveId) {
+//       application.executive = req.body.executiveId;
+
+//       await Executive.findByIdAndUpdate(
+//         req.body.executiveId,
+//         {
+//           $addToSet: {
+//             assignedApplications: application._id,
+//           },
+//         },
+//         { new: true }
+//       );
+//     }
+
+//     // ================= POLICY DOCUMENT =================
+//     if (
+//       req.files &&
+//       req.files.adminPolicyDocument &&
+//       req.files.adminPolicyDocument.length > 0
+//     ) {
+//       const file = req.files.adminPolicyDocument[0];
+
+//       application.adminPolicyDocument =
+//         `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
+//     }
+
+//     // ================= SAVE =================
+//     await application.save();
+
+//     // ================= UPDATED DATA =================
+//     const updatedApplication = await Application.findById(
+//       application._id
+//     )
+//       .populate("user", "fullName emailId mobileNumber")
+//       .populate("executive", "Name emailId mobileNumber");
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Application updated successfully",
+//       data: updatedApplication,
+//     });
+
+//   } catch (error) {
+//     console.log("UPDATE APPLICATION ERROR:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message || "Server Error",
+//     });
+//   }
+// };
 
 // ================= DELETE =================
 exports.deleteApplication = async (req, res) => {
