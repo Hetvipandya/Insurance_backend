@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Executive = require("../models/Executive");
 
-const authMiddleware = async (req, res, next) => {
+const authMiddleware = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -55,7 +55,6 @@ const authMiddleware = async (req, res, next) => {
       role,
     };
 
-    next();
 
   } catch (err) {
     console.log(err);
