@@ -273,35 +273,38 @@ exports.updateApplication = async (req, res) => {
 
     if (!application) {
       return res.status(404).json({
+        success: false,
         message: "Application not found",
       });
     }
 
     // ================= STATUS UPDATE =================
-// ================= STATUS UPDATE =================
-if (req.body.status) {
-  application.status = req.body.status;
-}
+    if (req.body.status !== undefined) {
+      application.status = req.body.status;
+    }
 
-// ================= MOBILE NUMBER UPDATE =================
-if (req.body.mobileNo) {
-  application.mobileNo = req.body.mobileNo;
-}
+    // ================= MOBILE NUMBER UPDATE =================
+    if (
+      req.body.mobileNo !== undefined &&
+      req.body.mobileNo.trim() !== ""
+    ) {
+      application.mobileNo = req.body.mobileNo;
+    }
 
-// ================= EXECUTIVE ASSIGN =================
-if (req.body.executiveId) {
-  application.executive = req.body.executiveId;
+    // ================= EXECUTIVE ASSIGN =================
+    if (req.body.executiveId) {
+      application.executive = req.body.executiveId;
 
-  await Executive.findByIdAndUpdate(
-    req.body.executiveId,
-    {
-      $addToSet: {
-        assignedApplications: application._id,
-      },
-    },
-    { new: true }
-  );
-}
+      await Executive.findByIdAndUpdate(
+        req.body.executiveId,
+        {
+          $addToSet: {
+            assignedApplications: application._id,
+          },
+        },
+        { new: true }
+      );
+    }
 
     // ================= POLICY DOCUMENT =================
     if (
@@ -316,22 +319,26 @@ if (req.body.executiveId) {
     }
 
     // ================= SAVE =================
-   await application.save();
+    await application.save();
 
-const updatedApplication = await Application.findById(application._id)
-  .populate("user", "fullName emailId mobileNumber")
-  .populate("executive", "Name emailId mobileNumber");
+    // ================= UPDATED DATA =================
+    const updatedApplication = await Application.findById(
+      application._id
+    )
+      .populate("user", "fullName emailId mobileNumber")
+      .populate("executive", "Name emailId mobileNumber");
 
-res.status(200).json({
-  success: true,
-  message: "Application updated successfully",
-  data: updatedApplication,
-});
+    return res.status(200).json({
+      success: true,
+      message: "Application updated successfully",
+      data: updatedApplication,
+    });
 
   } catch (error) {
     console.log("UPDATE APPLICATION ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       message: error.message || "Server Error",
     });
   }
