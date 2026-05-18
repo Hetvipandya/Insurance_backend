@@ -288,38 +288,33 @@ exports.updateApplication = async (req, res) => {
     if (req.body.executiveId) {
       application.executive = req.body.executiveId;
 
-      // Executive ma application add
       await Executive.findByIdAndUpdate(
         req.body.executiveId,
         {
           $addToSet: {
             assignedApplications: application._id,
           },
-        },
-        { new: true }
+        }
       );
     }
 
-    // ================= USER DETAILS UPDATE =================
+    // ================= USER UPDATE =================
     if (application.user) {
-      const userUpdateData = {};
+      const userData = {};
 
-      if (req.body.fullName) {
-        userUpdateData.fullName = req.body.fullName;
-      }
+      if (req.body.fullName)
+        userData.fullName = req.body.fullName;
 
-      if (req.body.emailId) {
-        userUpdateData.emailId = req.body.emailId;
-      }
+      if (req.body.emailId)
+        userData.emailId = req.body.emailId;
 
-      if (req.body.mobileNumber) {
-        userUpdateData.mobileNumber = req.body.mobileNumber;
-      }
+      if (req.body.mobileNumber)
+        userData.mobileNumber = req.body.mobileNumber;
 
-      if (Object.keys(userUpdateData).length > 0) {
+      if (Object.keys(userData).length > 0) {
         await User.findByIdAndUpdate(
           application.user,
-          userUpdateData,
+          userData,
           { new: true }
         );
       }
@@ -350,51 +345,58 @@ exports.updateApplication = async (req, res) => {
 
     // ================= DOCUMENT UPDATE =================
     const documentFields = [
-      "adminPolicyDocument",
-      "rcBook",
-      "insuranceDocument",
-      "aadhaarCard",
-      "panCard",
-      "drivingLicense",
-      "vehicleImage",
-      "otherDocument",
+      "rcBookImages",
+      "aadharCardImages",
+      "panCardImages",
+      "oldPolicyImages",
+      "otherImages",
     ];
 
     documentFields.forEach((field) => {
-      if (
-        req.files &&
-        req.files[field] &&
-        req.files[field].length > 0
-      ) {
-        const file = req.files[field][0];
-
-        application[field] =
-          `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
+      if (req.files?.[field]?.length > 0) {
+        application[field] = req.files[field].map(
+          (file) => file.path // ✅ Cloudinary URL
+        );
       }
     });
+
+    // Single file
+    if (req.files?.adminPolicyDocument?.length > 0) {
+      application.adminPolicyDocument =
+        req.files.adminPolicyDocument[0].path; // ✅ Cloudinary URL
+    }
 
     // ================= SAVE =================
     await application.save();
 
-    // ================= GET UPDATED DATA =================
-    const updatedApplication = await Application.findById(
-      application._id
-    )
-      .populate("user", "fullName emailId mobileNumber")
-      .populate("executive", "Name emailId mobileNumber");
+    const updatedApplication =
+      await Application.findById(application._id)
+        .populate(
+          "user",
+          "fullName emailId mobileNumber"
+        )
+        .populate(
+          "executive",
+          "Name emailId mobileNumber"
+        );
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: "Application updated successfully",
+      message:
+        "Application updated successfully",
       data: updatedApplication,
     });
 
   } catch (error) {
-    console.log("UPDATE APPLICATION ERROR:", error);
+    console.log(
+      "UPDATE APPLICATION ERROR:",
+      error
+    );
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message:
+        error.message || "Server Error",
     });
   }
 };
