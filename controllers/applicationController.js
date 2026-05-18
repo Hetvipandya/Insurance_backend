@@ -1,6 +1,5 @@
 const Application = require("../models/Application");
 const Executive = require("../models/Executive");
-const User = require("../models/User");
 
 // ================= CREATE =================
 exports.createApplication = async (req, res) => {
@@ -274,7 +273,6 @@ exports.updateApplication = async (req, res) => {
 
     if (!application) {
       return res.status(404).json({
-        success: false,
         message: "Application not found",
       });
     }
@@ -288,115 +286,48 @@ exports.updateApplication = async (req, res) => {
     if (req.body.executiveId) {
       application.executive = req.body.executiveId;
 
+      // executive ma application id add karo
       await Executive.findByIdAndUpdate(
         req.body.executiveId,
         {
           $addToSet: {
             assignedApplications: application._id,
           },
-        }
+        },
+        { new: true }
       );
     }
 
-    // ================= USER UPDATE =================
-    if (application.user) {
-      const userData = {};
+    // ================= POLICY DOCUMENT =================
+    if (
+      req.files &&
+      req.files.adminPolicyDocument &&
+      req.files.adminPolicyDocument.length > 0
+    ) {
+      const file = req.files.adminPolicyDocument[0];
 
-      if (req.body.fullName)
-        userData.fullName = req.body.fullName;
-
-      if (req.body.emailId)
-        userData.emailId = req.body.emailId;
-
-      if (req.body.mobileNumber)
-        userData.mobileNumber = req.body.mobileNumber;
-
-      if (Object.keys(userData).length > 0) {
-        await User.findByIdAndUpdate(
-          application.user,
-          userData,
-          { new: true }
-        );
-      }
-    }
-
-    // ================= APPLICATION FIELD UPDATE =================
-    const updateFields = [
-      "carNo",
-      "vehicleType",
-      "policyType",
-      "insuranceCompany",
-      "premiumAmount",
-      "registrationNumber",
-      "engineNumber",
-      "chassisNumber",
-      "address",
-      "city",
-      "state",
-      "pincode",
-      "remarks",
-    ];
-
-    updateFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        application[field] = req.body[field];
-      }
-    });
-
-    // ================= DOCUMENT UPDATE =================
-    const documentFields = [
-      "rcBookImages",
-      "aadharCardImages",
-      "panCardImages",
-      "oldPolicyImages",
-      "otherImages",
-    ];
-
-    documentFields.forEach((field) => {
-      if (req.files?.[field]?.length > 0) {
-        application[field] = req.files[field].map(
-          (file) => file.path // ✅ Cloudinary URL
-        );
-      }
-    });
-
-    // Single file
-    if (req.files?.adminPolicyDocument?.length > 0) {
       application.adminPolicyDocument =
-        req.files.adminPolicyDocument[0].path; // ✅ Cloudinary URL
+        `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
     }
 
     // ================= SAVE =================
-    await application.save();
+   await application.save();
 
-    const updatedApplication =
-      await Application.findById(application._id)
-        .populate(
-          "user",
-          "fullName emailId mobileNumber"
-        )
-        .populate(
-          "executive",
-          "Name emailId mobileNumber"
-        );
+const updatedApplication = await Application.findById(application._id)
+  .populate("user", "fullName emailId mobileNumber")
+  .populate("executive", "Name emailId mobileNumber");
 
-    return res.status(200).json({
-      success: true,
-      message:
-        "Application updated successfully",
-      data: updatedApplication,
-    });
+res.status(200).json({
+  success: true,
+  message: "Application updated successfully",
+  data: updatedApplication,
+});
 
   } catch (error) {
-    console.log(
-      "UPDATE APPLICATION ERROR:",
-      error
-    );
+    console.log("UPDATE APPLICATION ERROR:", error);
 
-    return res.status(500).json({
-      success: false,
-      message:
-        error.message || "Server Error",
+    res.status(500).json({
+      message: error.message || "Server Error",
     });
   }
 };
