@@ -34,11 +34,7 @@ router.put(
   authMiddleware,
   assignExecutive
 );
-router.put(
-  "/update/:id",
-  authMiddleware,
-  updateApplication
-);
+router.put("/update/:id", authMiddleware, uploadFields, updateApplication); 
 router.delete("/delete/:id", authMiddleware, deleteApplication);
 
 module.exports = router;
