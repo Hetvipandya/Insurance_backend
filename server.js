@@ -111,7 +111,7 @@ app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"))
 );
-
+ 
 // ✅ ROUTES
 app.use("/api/user", userRoutes);
 app.use("/api/application", applicationRoutes);
