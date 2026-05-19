@@ -268,92 +268,105 @@ const app = await Application.findById(req.params.id)
 exports.updateApplication = async (req, res) => {
   try {
     req.body = req.body || {};
+
     console.log("BODY:", req.body);
     console.log("FILES:", req.files);
 
     const application = await Application.findById(req.params.id);
+
     if (!application) {
-      return res.status(404).json({ success: false, message: "Application not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
     }
 
     // ================= STATUS =================
-    if (req.body.status && req.body.status.trim() !== "") {
+    if (req.body.status?.trim()) {
       application.status = req.body.status.trim();
     }
 
     // ================= MOBILE NUMBER =================
-    if (req.body.mobileNo && req.body.mobileNo.trim() !== "") {
+    if (req.body.mobileNo?.trim()) {
       application.mobileNo = req.body.mobileNo.trim();
     }
 
     // ================= EXECUTIVE ASSIGN =================
-    if (req.body.executiveId && req.body.executiveId.trim() !== "") {
+    if (req.body.executiveId?.trim()) {
       application.executive = req.body.executiveId.trim();
+
       await Executive.findByIdAndUpdate(
         req.body.executiveId,
-        { $addToSet: { assignedApplications: application._id } },
-        { new: true }
+        {
+          $addToSet: {
+            assignedApplications: application._id,
+          },
+        }
       );
     }
 
-    // ================= RC BOOK IMAGES =================
-    if (req.files?.rcBookImages?.length > 0) {
-      application.rcBookImages = req.files.rcBookImages.map(
-        (file) => `${req.protocol}://${req.get("host")}/uploads/insurance/${file.filename}`
-      );
-    }
+    // ================= IMAGE UPDATE FUNCTION =================
+    const updateImages = (fieldName) => {
+      if (req.files?.[fieldName]?.length > 0) {
+        // Cloudinary URL
+        return req.files[fieldName].map((file) => file.path);
+      }
+      return application[fieldName]; // old images keep
+    };
 
-    // ================= AADHAR CARD IMAGES =================
-    if (req.files?.aadharCardImages?.length > 0) {
-      application.aadharCardImages = req.files.aadharCardImages.map(
-        (file) => `${req.protocol}://${req.get("host")}/uploads/insurance/${file.filename}`
-      );
-    }
+    // ================= UPDATE IMAGES =================
+    application.rcBookImages =
+      updateImages("rcBookImages");
 
-    // ================= PAN CARD IMAGES =================
-    if (req.files?.panCardImages?.length > 0) {
-      application.panCardImages = req.files.panCardImages.map(
-        (file) => `${req.protocol}://${req.get("host")}/uploads/insurance/${file.filename}`
-      );
-    }
+    application.aadharCardImages =
+      updateImages("aadharCardImages");
 
-    // ================= OLD POLICY IMAGES =================
-    if (req.files?.oldPolicyImages?.length > 0) {
-      application.oldPolicyImages = req.files.oldPolicyImages.map(
-        (file) => `${req.protocol}://${req.get("host")}/uploads/insurance/${file.filename}`
-      );
-    }
+    application.panCardImages =
+      updateImages("panCardImages");
 
-    // ================= OTHER IMAGES =================
-    if (req.files?.otherImages?.length > 0) {
-      application.otherImages = req.files.otherImages.map(
-        (file) => `${req.protocol}://${req.get("host")}/uploads/insurance/${file.filename}`
-      );
-    }
+    application.oldPolicyImages =
+      updateImages("oldPolicyImages");
+
+    application.otherImages =
+      updateImages("otherImages");
 
     // ================= POLICY DOCUMENT =================
     if (req.files?.adminPolicyDocument?.length > 0) {
-      const file = req.files.adminPolicyDocument[0];
-      application.adminPolicyDocument = `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
+      application.adminPolicyDocument =
+        req.files.adminPolicyDocument[0].path;
     }
 
     // ================= SAVE =================
     await application.save();
 
-    // ================= GET UPDATED APPLICATION =================
-    const updatedApplication = await Application.findById(application._id)
-      .populate("user", "fullName emailId mobileNumber")
-      .populate("executive", "Name emailId mobileNumber");
+    // ================= GET UPDATED DATA =================
+    const updatedApplication =
+      await Application.findById(application._id)
+        .populate(
+          "user",
+          "fullName emailId mobileNumber"
+        )
+        .populate(
+          "executive",
+          "Name emailId mobileNumber"
+        );
 
     return res.status(200).json({
       success: true,
       message: "Application updated successfully",
       data: updatedApplication,
     });
-
   } catch (error) {
-    console.log("UPDATE APPLICATION ERROR:", error);
-    return res.status(500).json({ success: false, message: error.message || "Server Error" });
+    console.log(
+      "UPDATE APPLICATION ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        error.message || "Server Error",
+    });
   }
 };
 

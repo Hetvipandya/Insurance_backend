@@ -37,6 +37,7 @@ router.put(
 router.put(
   "/update/:id",
   authMiddleware,
+    uploadFields,
   updateApplication
 );
 router.delete("/delete/:id", authMiddleware, deleteApplication);

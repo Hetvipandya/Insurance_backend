@@ -12,7 +12,7 @@ cloudinary.config({
 // ================= STORAGE =================
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: async (req, file) => {
+  params: async (req, file) => { 
     return {
       folder: "insurance",
       resource_type: "auto",
