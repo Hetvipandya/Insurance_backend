@@ -267,167 +267,84 @@ const app = await Application.findById(req.params.id)
 
 exports.updateApplication = async (req, res) => {
   try {
-
-    // SAFE BODY
     req.body = req.body || {};
-
     console.log("BODY:", req.body);
     console.log("FILES:", req.files);
 
-    // ================= FIND APPLICATION =================
     const application = await Application.findById(req.params.id);
-
     if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: "Application not found",
-      });
+      return res.status(404).json({ success: false, message: "Application not found" });
     }
 
-    // ================= STATUS UPDATE =================
-    if (
-      req.body.status !== undefined &&
-      req.body.status.toString().trim() !== ""
-    ) {
-      application.status = req.body.status;
+    // ================= STATUS =================
+    if (req.body.status && req.body.status.trim() !== "") {
+      application.status = req.body.status.trim();
     }
 
-    // ================= MOBILE NUMBER UPDATE =================
-    if (
-      req.body.mobileNo !== undefined &&
-      req.body.mobileNo.toString().trim() !== ""
-    ) {
-      application.mobileNo = req.body.mobileNo.toString();
+    // ================= MOBILE NUMBER =================
+    if (req.body.mobileNo && req.body.mobileNo.trim() !== "") {
+      application.mobileNo = req.body.mobileNo.trim();
     }
 
     // ================= EXECUTIVE ASSIGN =================
-    if (
-      req.body.executiveId !== undefined &&
-      req.body.executiveId.toString().trim() !== ""
-    ) {
-
-      application.executive = req.body.executiveId;
-
+    if (req.body.executiveId && req.body.executiveId.trim() !== "") {
+      application.executive = req.body.executiveId.trim();
       await Executive.findByIdAndUpdate(
         req.body.executiveId,
-        {
-          $addToSet: {
-            assignedApplications: application._id,
-          },
-        },
+        { $addToSet: { assignedApplications: application._id } },
         { new: true }
       );
     }
 
     // ================= RC BOOK IMAGES =================
-    if (
-      req.files &&
-      req.files.rcBookImages &&
-      req.files.rcBookImages.length > 0
-    ) {
-
-      const rcImages = req.files.rcBookImages.map(
-        (file) => `/uploads/insurance/${file.filename}`
+    if (req.files?.rcBookImages?.length > 0) {
+      application.rcBookImages = req.files.rcBookImages.map(
+        (file) => `${req.protocol}://${req.get("host")}/uploads/insurance/${file.filename}`
       );
-
-      application.rcBookImages = [
-        ...(application.rcBookImages || []),
-        ...rcImages,
-      ];
     }
 
     // ================= AADHAR CARD IMAGES =================
-    if (
-      req.files &&
-      req.files.aadharCardImages &&
-      req.files.aadharCardImages.length > 0
-    ) {
-
-      const aadharImages = req.files.aadharCardImages.map(
-        (file) => `/uploads/insurance/${file.filename}`
+    if (req.files?.aadharCardImages?.length > 0) {
+      application.aadharCardImages = req.files.aadharCardImages.map(
+        (file) => `${req.protocol}://${req.get("host")}/uploads/insurance/${file.filename}`
       );
-
-      application.aadharCardImages = [
-        ...(application.aadharCardImages || []),
-        ...aadharImages,
-      ];
     }
 
     // ================= PAN CARD IMAGES =================
-    if (
-      req.files &&
-      req.files.panCardImages &&
-      req.files.panCardImages.length > 0
-    ) {
-
-      const panImages = req.files.panCardImages.map(
-        (file) => `/uploads/insurance/${file.filename}`
+    if (req.files?.panCardImages?.length > 0) {
+      application.panCardImages = req.files.panCardImages.map(
+        (file) => `${req.protocol}://${req.get("host")}/uploads/insurance/${file.filename}`
       );
-
-      application.panCardImages = [
-        ...(application.panCardImages || []),
-        ...panImages,
-      ];
     }
 
     // ================= OLD POLICY IMAGES =================
-    if (
-      req.files &&
-      req.files.oldPolicyImages &&
-      req.files.oldPolicyImages.length > 0
-    ) {
-
-      const oldPolicyImages = req.files.oldPolicyImages.map(
-        (file) => `/uploads/insurance/${file.filename}`
+    if (req.files?.oldPolicyImages?.length > 0) {
+      application.oldPolicyImages = req.files.oldPolicyImages.map(
+        (file) => `${req.protocol}://${req.get("host")}/uploads/insurance/${file.filename}`
       );
-
-      application.oldPolicyImages = [
-        ...(application.oldPolicyImages || []),
-        ...oldPolicyImages,
-      ];
     }
 
     // ================= OTHER IMAGES =================
-    if (
-      req.files &&
-      req.files.otherImages &&
-      req.files.otherImages.length > 0
-    ) {
-
-      const otherImages = req.files.otherImages.map(
-        (file) => `/uploads/insurance/${file.filename}`
+    if (req.files?.otherImages?.length > 0) {
+      application.otherImages = req.files.otherImages.map(
+        (file) => `${req.protocol}://${req.get("host")}/uploads/insurance/${file.filename}`
       );
-
-      application.otherImages = [
-        ...(application.otherImages || []),
-        ...otherImages,
-      ];
     }
 
     // ================= POLICY DOCUMENT =================
-    if (
-      req.files &&
-      req.files.adminPolicyDocument &&
-      req.files.adminPolicyDocument.length > 0
-    ) {
-
+    if (req.files?.adminPolicyDocument?.length > 0) {
       const file = req.files.adminPolicyDocument[0];
-
-      application.adminPolicyDocument =
-        `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
+      application.adminPolicyDocument = `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
     }
 
-    // ================= SAVE APPLICATION =================
+    // ================= SAVE =================
     await application.save();
 
     // ================= GET UPDATED APPLICATION =================
-    const updatedApplication = await Application.findById(
-      application._id
-    )
+    const updatedApplication = await Application.findById(application._id)
       .populate("user", "fullName emailId mobileNumber")
       .populate("executive", "Name emailId mobileNumber");
 
-    // ================= RESPONSE =================
     return res.status(200).json({
       success: true,
       message: "Application updated successfully",
@@ -435,13 +352,8 @@ exports.updateApplication = async (req, res) => {
     });
 
   } catch (error) {
-
     console.log("UPDATE APPLICATION ERROR:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Server Error",
-    });
+    return res.status(500).json({ success: false, message: error.message || "Server Error" });
   }
 };
 
