@@ -333,6 +333,9 @@ exports.updateApplication = async (req, res) => {
         application.adminPolicyDocument =
           req.files.adminPolicyDocument[0].path;
       }
+
+      // ================= SET STATUS TO PENDING ON REUPLOAD =================
+      application.status = "pending";
     }
 
     // ================= SAVE =================
