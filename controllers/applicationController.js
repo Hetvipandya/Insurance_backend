@@ -307,33 +307,36 @@ exports.updateApplication = async (req, res) => {
 
     // ================= IMAGE UPDATE FUNCTION =================
     const updateImages = (fieldName) => {
-      if (req.files?.[fieldName]?.length > 0) {
-        // Cloudinary URL
+      if (req.files && req.files[fieldName] && req.files[fieldName].length > 0) {
+        // Return Cloudinary URLs for new files
         return req.files[fieldName].map((file) => file.path);
       }
-      return application[fieldName]; // old images keep
+      // Keep old images if no new files provided
+      return application[fieldName] || [];
     };
 
     // ================= UPDATE IMAGES =================
-    application.rcBookImages =
-      updateImages("rcBookImages");
+    if (req.files && Object.keys(req.files).length > 0) {
+      application.rcBookImages =
+        updateImages("rcBookImages");
 
-    application.aadharCardImages =
-      updateImages("aadharCardImages");
+      application.aadharCardImages =
+        updateImages("aadharCardImages");
 
-    application.panCardImages =
-      updateImages("panCardImages");
+      application.panCardImages =
+        updateImages("panCardImages");
 
-    application.oldPolicyImages =
-      updateImages("oldPolicyImages");
+      application.oldPolicyImages =
+        updateImages("oldPolicyImages");
 
-    application.otherImages =
-      updateImages("otherImages");
+      application.otherImages =
+        updateImages("otherImages");
 
-    // ================= POLICY DOCUMENT =================
-    if (req.files?.adminPolicyDocument?.length > 0) {
-      application.adminPolicyDocument =
-        req.files.adminPolicyDocument[0].path;
+      // ================= POLICY DOCUMENT =================
+      if (req.files.adminPolicyDocument && req.files.adminPolicyDocument.length > 0) {
+        application.adminPolicyDocument =
+          req.files.adminPolicyDocument[0].path;
+      }
     }
 
     // ================= SAVE =================
