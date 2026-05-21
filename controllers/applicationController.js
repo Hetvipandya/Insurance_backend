@@ -316,27 +316,32 @@ exports.updateApplication = async (req, res) => {
     };
 
     // ================= UPDATE IMAGES =================
+    let documentReuploaded = false;
     if (req.files && Object.keys(req.files).length > 0) {
-      application.rcBookImages =
-        updateImages("rcBookImages");
-
-      application.aadharCardImages =
-        updateImages("aadharCardImages");
-
-      application.panCardImages =
-        updateImages("panCardImages");
-
-      application.oldPolicyImages =
-        updateImages("oldPolicyImages");
-
-      application.otherImages =
-        updateImages("otherImages");
+      const fields = [
+        "rcBookImages",
+        "aadharCardImages",
+        "panCardImages",
+        "oldPolicyImages",
+        "otherImages"
+      ];
+      fields.forEach((field) => {
+        if (req.files[field] && req.files[field].length > 0) {
+          application[field] = updateImages(field);
+          documentReuploaded = true;
+        }
+      });
 
       // ================= POLICY DOCUMENT =================
       if (req.files.adminPolicyDocument && req.files.adminPolicyDocument.length > 0) {
-        application.adminPolicyDocument =
-          req.files.adminPolicyDocument[0].path;
+        application.adminPolicyDocument = req.files.adminPolicyDocument[0].path;
+        documentReuploaded = true;
       }
+    }
+
+    // If any document/photo re-uploaded, set status to pending
+    if (documentReuploaded) {
+      application.status = "pending";
     }
 
     // ================= SAVE =================
