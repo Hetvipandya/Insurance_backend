@@ -4,12 +4,15 @@ const Executive = require("../models/Executive");
 // ================= CREATE =================
 exports.createApplication = async (req, res) => {
   try {
-    const { carNo, tp, otherDetails, mobileNo } = req.body;
+    const { carNo, tp, otherDetails, mobileNo } =
+      req.body;
 
     const userId = req.user?.id;
 
-    if (!userId) { 
+    // ================= AUTH CHECK =================
+    if (!userId) {
       return res.status(401).json({
+        success: false,
         message: "Unauthorized",
       });
     }
@@ -20,48 +23,55 @@ exports.createApplication = async (req, res) => {
       req.user.role !== "admin"
     ) {
       return res.status(403).json({
-        message: "Only admin can upload policy document",
+        success: false,
+        message:
+          "Only admin can upload policy document",
       });
     }
-
-    // ================= GET FILE PATHS (Cloudinary URLs) =================
-    const rcBookImages = req.files?.rcBookImages
-      ? req.files.rcBookImages.map((file) => file.path)
-      : [];
-
-    const aadharCardImages = req.files?.aadharCardImages
-      ? req.files.aadharCardImages.map((file) => file.path)
-      : [];
-
-    const panCardImages = req.files?.panCardImages
-      ? req.files.panCardImages.map((file) => file.path)
-      : [];
-
-    const oldPolicyImages = req.files?.oldPolicyImages
-      ? req.files.oldPolicyImages.map((file) => file.path)
-      : [];
-
-    const otherImages = req.files?.otherImages
-      ? req.files.otherImages.map((file) => file.path)
-      : [];
-
-    const adminPolicyDocument = req.files?.adminPolicyDocument
-      ? req.files.adminPolicyDocument[0].path
-      : null;
 
     // ================= VALIDATION =================
     if (!carNo || !tp) {
       return res.status(400).json({
-        message: "carNo & tp required",
+        success: false,
+        message: "carNo & tp are required",
       });
     }
 
+    // ================= GET CLOUDINARY URLS =================
+    const getFileUrls = (fieldName) => {
+      return req.files?.[fieldName]?.map(
+        (file) => file.path // Cloudinary URL
+      ) || [];
+    };
+
+    const rcBookImages =
+      getFileUrls("rcBookImages");
+
+    const aadharCardImages =
+      getFileUrls("aadharCardImages");
+
+    const panCardImages =
+      getFileUrls("panCardImages");
+
+    const oldPolicyImages =
+      getFileUrls("oldPolicyImages");
+
+    const otherImages =
+      getFileUrls("otherImages");
+
+    const adminPolicyDocument =
+      req.files?.adminPolicyDocument?.[0]
+        ?.path || null;
+
+    // ================= REQUIRED FILE CHECK =================
     if (
-      !rcBookImages.length ||
-      !aadharCardImages.length
+      rcBookImages.length === 0 ||
+      aadharCardImages.length === 0
     ) {
       return res.status(400).json({
-        message: "RC Book & Aadhar images required",
+        success: false,
+        message:
+          "RC Book & Aadhar images are required",
       });
     }
 
@@ -71,37 +81,33 @@ exports.createApplication = async (req, res) => {
       carNo,
       tp,
       mobileNo,
+      otherDetails,
+
       rcBookImages,
       aadharCardImages,
       panCardImages,
       oldPolicyImages,
       otherImages,
 
-      otherDetails,
-
       adminPolicyDocument,
 
       status: "pending",
     });
 
-    // ================= RESPONSE =================
-    res.status(201).json({
-      message: "Application created",
-
-      data: {
-        ...app.toObject(),
-
-        status: app.status || "pending",
-
-        adminPolicyDocument:
-          app.adminPolicyDocument || null,
-      },
+    return res.status(201).json({
+      success: true,
+      message: "Application created successfully",
+      data: app,
     });
   } catch (err) {
-    console.error(err);
+    console.error(
+      "Create Application Error:",
+      err
+    );
 
-    res.status(500).json({
-      message: "Server Error",
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server Error",
     });
   }
 };
