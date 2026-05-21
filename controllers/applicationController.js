@@ -268,7 +268,9 @@ exports.updateApplication = async (req, res) => {
     console.log("BODY:", req.body);
     console.log("FILES:", req.files);
 
-    const application = await Application.findById(req.params.id);
+    const application = await Application.findById(
+      req.params.id
+    );
 
     if (!application) {
       return res.status(404).json({
@@ -279,23 +281,39 @@ exports.updateApplication = async (req, res) => {
 
     // ================= STATUS =================
     if (req.body.status?.trim()) {
-      application.status = req.body.status.trim();
+      const status = req.body.status.trim();
+
+      application.status = status;
+
+      // ================= REJECT REASON =================
+      if (status === "rejected") {
+        application.rejectReason =
+          req.body.rejectReason?.trim() || "";
+      }
+
+      // ================= CLEAR REJECT REASON =================
+      if (status === "approved") {
+        application.rejectReason = "";
+      }
     }
 
     // ================= MOBILE NUMBER =================
     if (req.body.mobileNo?.trim()) {
-      application.mobileNo = req.body.mobileNo.trim();
+      application.mobileNo =
+        req.body.mobileNo.trim();
     }
 
     // ================= EXECUTIVE ASSIGN =================
     if (req.body.executiveId?.trim()) {
-      application.executive = req.body.executiveId.trim();
+      application.executive =
+        req.body.executiveId.trim();
 
       await Executive.findByIdAndUpdate(
         req.body.executiveId,
         {
           $addToSet: {
-            assignedApplications: application._id,
+            assignedApplications:
+              application._id,
           },
         }
       );
@@ -303,16 +321,24 @@ exports.updateApplication = async (req, res) => {
 
     // ================= IMAGE UPDATE FUNCTION =================
     const updateImages = (fieldName) => {
-      if (req.files && req.files[fieldName] && req.files[fieldName].length > 0) {
-        // Return Cloudinary URLs for new files
-        return req.files[fieldName].map((file) => file.path);
+      if (
+        req.files &&
+        req.files[fieldName] &&
+        req.files[fieldName].length > 0
+      ) {
+        return req.files[fieldName].map(
+          (file) => file.path
+        );
       }
-      // Keep old images if no new files provided
+
       return application[fieldName] || [];
     };
 
     // ================= UPDATE IMAGES =================
-    if (req.files && Object.keys(req.files).length > 0) {
+    if (
+      req.files &&
+      Object.keys(req.files).length > 0
+    ) {
       application.rcBookImages =
         updateImages("rcBookImages");
 
@@ -329,13 +355,21 @@ exports.updateApplication = async (req, res) => {
         updateImages("otherImages");
 
       // ================= POLICY DOCUMENT =================
-      if (req.files.adminPolicyDocument && req.files.adminPolicyDocument.length > 0) {
+      if (
+        req.files.adminPolicyDocument &&
+        req.files.adminPolicyDocument.length >
+          0
+      ) {
         application.adminPolicyDocument =
-          req.files.adminPolicyDocument[0].path;
+          req.files.adminPolicyDocument[0]
+            .path;
       }
 
-      // ================= SET STATUS TO PENDING ON REUPLOAD =================
+      // ================= RESET STATUS AFTER REUPLOAD =================
       application.status = "pending";
+
+      // clear reject reason after reupload
+      application.rejectReason = "";
     }
 
     // ================= SAVE =================
@@ -343,7 +377,9 @@ exports.updateApplication = async (req, res) => {
 
     // ================= GET UPDATED DATA =================
     const updatedApplication =
-      await Application.findById(application._id)
+      await Application.findById(
+        application._id
+      )
         .populate(
           "user",
           "fullName emailId mobileNumber"
@@ -355,7 +391,8 @@ exports.updateApplication = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Application updated successfully",
+      message:
+        "Application updated successfully",
       data: updatedApplication,
     });
   } catch (error) {
