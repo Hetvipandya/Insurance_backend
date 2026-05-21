@@ -24,39 +24,29 @@ exports.createApplication = async (req, res) => {
       });
     }
 
-    // ================= GET FILE PATHS =================
+    // ================= GET FILE PATHS (Cloudinary URLs) =================
     const rcBookImages = req.files?.rcBookImages
-      ? req.files.rcBookImages.map(
-          (file) => `/uploads/${file.filename}`
-        )
+      ? req.files.rcBookImages.map((file) => file.path)
       : [];
 
     const aadharCardImages = req.files?.aadharCardImages
-      ? req.files.aadharCardImages.map(
-          (file) => `/uploads/${file.filename}`
-        )
+      ? req.files.aadharCardImages.map((file) => file.path)
       : [];
 
     const panCardImages = req.files?.panCardImages
-      ? req.files.panCardImages.map(
-          (file) => `/uploads/${file.filename}`
-        )
+      ? req.files.panCardImages.map((file) => file.path)
       : [];
 
     const oldPolicyImages = req.files?.oldPolicyImages
-      ? req.files.oldPolicyImages.map(
-          (file) => `/uploads/${file.filename}`
-        )
+      ? req.files.oldPolicyImages.map((file) => file.path)
       : [];
 
     const otherImages = req.files?.otherImages
-      ? req.files.otherImages.map(
-          (file) => `/uploads/${file.filename}`
-        )
+      ? req.files.otherImages.map((file) => file.path)
       : [];
 
     const adminPolicyDocument = req.files?.adminPolicyDocument
-      ? `/uploads/${req.files.adminPolicyDocument[0].filename}`
+      ? req.files.adminPolicyDocument[0].path
       : null;
 
     // ================= VALIDATION =================
@@ -316,32 +306,27 @@ exports.updateApplication = async (req, res) => {
     };
 
     // ================= UPDATE IMAGES =================
-    let documentReuploaded = false;
     if (req.files && Object.keys(req.files).length > 0) {
-      const fields = [
-        "rcBookImages",
-        "aadharCardImages",
-        "panCardImages",
-        "oldPolicyImages",
-        "otherImages"
-      ];
-      fields.forEach((field) => {
-        if (req.files[field] && req.files[field].length > 0) {
-          application[field] = updateImages(field);
-          documentReuploaded = true;
-        }
-      });
+      application.rcBookImages =
+        updateImages("rcBookImages");
+
+      application.aadharCardImages =
+        updateImages("aadharCardImages");
+
+      application.panCardImages =
+        updateImages("panCardImages");
+
+      application.oldPolicyImages =
+        updateImages("oldPolicyImages");
+
+      application.otherImages =
+        updateImages("otherImages");
 
       // ================= POLICY DOCUMENT =================
       if (req.files.adminPolicyDocument && req.files.adminPolicyDocument.length > 0) {
-        application.adminPolicyDocument = req.files.adminPolicyDocument[0].path;
-        documentReuploaded = true;
+        application.adminPolicyDocument =
+          req.files.adminPolicyDocument[0].path;
       }
-    }
-
-    // If any document/photo re-uploaded, set status to pending
-    if (documentReuploaded) {
-      application.status = "pending";
     }
 
     // ================= SAVE =================

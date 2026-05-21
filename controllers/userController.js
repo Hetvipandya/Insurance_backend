@@ -35,7 +35,7 @@ exports.registerUser = async (req, res) => {
     // hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ safe image handling
+    // ✅ safe image handling (Cloudinary URL)
     const photo = req.file ? req.file.path : null;
 
     const user = await User.create({
