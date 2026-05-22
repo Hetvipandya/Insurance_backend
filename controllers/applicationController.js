@@ -156,6 +156,10 @@ exports.getAllApplicationsForAdmin = async (req, res) => {
     console.log("Fetching applications...");
     const apps = await Application.find()
       .populate("user", "fullName emailId mobileNumber")
+       .populate(
+          "executive",
+          "Name Email mobileNo"
+        ) 
       .sort({ createdAt: -1 });
 
     console.log("Found applications:", apps.length);
