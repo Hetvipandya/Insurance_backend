@@ -290,15 +290,14 @@ exports.updateApplication = async (req, res) => {
       application.status = status;
 
       // ================= REJECT REASON =================
-      if (status === "rejected") {
-        application.rejectReason =
-          req.body.rejectReason?.trim() || "";
-      }
+     if (status === "rejected") {
+  application.rejectionReason =
+    req.body.rejectionReason?.trim() || "";
+}
 
-      // ================= CLEAR REJECT REASON =================
-      if (status === "approved") {
-        application.rejectReason = "";
-      }
+if (status === "approved") {
+  application.rejectionReason = "";
+} 
     }
 
     // ================= MOBILE NUMBER =================
@@ -373,7 +372,7 @@ exports.updateApplication = async (req, res) => {
       application.status = "pending";
 
       // clear reject reason after reupload
-      application.rejectReason = "";
+      application.rejectionReason = "";
     }
 
     // ================= SAVE =================

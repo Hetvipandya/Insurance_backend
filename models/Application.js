@@ -70,6 +70,12 @@ const applicationSchema = new mongoose.Schema(
       default: "none",
     },
 
+      rejectionReason: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     otherImages: {
       type: [String],
       default: [],
