@@ -284,20 +284,26 @@ exports.updateApplication = async (req, res) => {
     }
 
     // ================= STATUS =================
-    if (req.body.status?.trim()) {
-      const status = req.body.status.trim();
+ if (req.body.status?.trim()) {
+  const status = req.body.status.trim();
 
-      application.status = status;
+  application.status = status;
+
 
       // ================= REJECT REASON =================
-     if (status === "rejected") {
-  application.rejectionReason =
-    req.body.rejectionReason?.trim() || "";
-}
+      if (status === "rejected") {
+    application.rejectionReason =
+      req.body.rejectionReason
+        ? req.body.rejectionReason
+            .toString()
+            .trim()
+        : "";
+  }
 
-if (status === "approved") {
-  application.rejectionReason = "";
-} 
+  if (status === "approved") {
+    application.rejectionReason = "";
+  }
+
     }
 
     // ================= MOBILE NUMBER =================
@@ -398,7 +404,8 @@ if (status === "approved") {
         "Application updated successfully",
       data: updatedApplication,
     });
-  } catch (error) {
+  }
+   catch (error) {
     console.log(
       "UPDATE APPLICATION ERROR:",
       error
