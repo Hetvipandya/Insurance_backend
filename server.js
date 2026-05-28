@@ -115,7 +115,7 @@ app.use(express.urlencoded({ extended: true }));
 // ✅ ROUTES
 app.use("/api/user", userRoutes);
 app.use("/api/application", applicationRoutes);
-app.use('/api/executive', executiveRoutes); 
+app.use('/api/executive', executiveRoutes);  
 
 
 // Test route

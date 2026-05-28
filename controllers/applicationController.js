@@ -422,6 +422,97 @@ exports.updateApplication = async (req, res) => {
 
     // ================= SAVE =================
     await application.save();
+    // ================= SEND NOTIFICATION TO DEALER =================
+try {
+  // user fetch karo
+  const dealer =
+    await User.findById(
+      application.user
+    );
+
+  if (
+    dealer &&
+    dealer.fcmToken
+  ) {
+    let title = "";
+    let body = "";
+
+    // Approved
+    if (
+      application.status ===
+      "approved"
+    ) {
+      title =
+        "Insurance Approved";
+
+      body = `Your application for vehicle ${application.carNo} has been approved`;
+    }
+
+    // Rejected
+    else if (
+      application.status ===
+      "rejected"
+    ) {
+      title =
+        "Insurance Rejected";
+
+      body = `Your application for vehicle ${application.carNo} has been rejected`;
+
+      if (
+        application.rejectionReason
+      ) {
+        body += ` Reason: ${application.rejectionReason}`;
+      }
+    }
+
+    // Pending
+    else if (
+      application.status ===
+      "pending"
+    ) {
+      title =
+        "Application Updated";
+
+      body = `Your application for vehicle ${application.carNo} is under review`;
+    }
+
+    // send push notification
+    await admin
+      .messaging()
+      .send({
+        token:
+          dealer.fcmToken,
+
+        notification: {
+          title,
+          body,
+        },
+
+        data: {
+          applicationId:
+            application._id.toString(),
+
+          status:
+            application.status,
+        },
+      });
+
+    console.log(
+      "✅ Dealer notification sent"
+    );
+  } else {
+    console.log(
+      "❌ Dealer FCM token not found"
+    );
+  }
+} catch (
+  notificationError
+) {
+  console.log(
+    "Notification Error:",
+    notificationError
+  );
+}
 
     // ================= GET UPDATED DATA =================
     const updatedApplication =

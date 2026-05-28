@@ -9,7 +9,7 @@ router.post("/save-token", async (req, res) => {
 
     await User.findByIdAndUpdate(userId, {
       fcmToken: token
-    });
+    }); 
 
     res.json({
       success: true
