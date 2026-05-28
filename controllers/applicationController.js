@@ -1,5 +1,7 @@
 const Application = require("../models/Application");
 const Executive = require("../models/Executive");
+const admin = require("../utils/firebaseAdmin");
+const User = require("../models/User");
 
 // ================= CREATE =================
 exports.createApplication = async (req, res) => {
@@ -93,6 +95,43 @@ exports.createApplication = async (req, res) => {
 
       status: "pending",
     });
+
+    // ================= SEND PUSH NOTIFICATION =================
+try {
+  // Find admin user
+  const adminUser = await User.findOne({
+    role: "admin",
+  });
+
+  // Check if admin has FCM token
+  if (
+    adminUser &&
+    adminUser.fcmToken
+  ) {
+    await admin.messaging().send({
+      token: adminUser.fcmToken,
+      notification: {
+        title:
+          "New Insurance Application",
+        body:
+          `Car No: ${carNo} submitted by ${req.user.fullName}`,
+      },
+    });
+
+    console.log(
+      "✅ Notification sent"
+    );
+  } else {
+    console.log(
+      "❌ Admin FCM token not found"
+    );
+  }
+} catch (notificationError) {
+  console.log(
+    "Notification Error:",
+    notificationError
+  );
+}
 
     return res.status(201).json({
       success: true,

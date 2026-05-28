@@ -65,7 +65,7 @@ exports.registerUser = async (req, res) => {
 
 // ===================== LOGIN =====================
 exports.loginUser = async (req, res) => {
-  try {
+  try { 
     const { emailId, mobileNumber, password } = req.body;
 
     if ((!emailId && !mobileNumber) || !password) {
