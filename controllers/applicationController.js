@@ -4,365 +4,153 @@ const admin = require("../utils/firebaseAdmin");
 const User = require("../models/User");
 
 // ================= CREATE =================
-// exports.createApplication = async (req, res) => {
-//   try {
-//     const { carNo, tp, otherDetails, mobileNo } =
-//       req.body;
+exports.createApplication = async (req, res) => {
+  try {
+    const { carNo, tp, otherDetails, mobileNo } =
+      req.body;
 
-//     const userId = req.user?.id;
+    const userId = req.user?.id;
 
-//     // ================= AUTH CHECK =================
-//     if (!userId) {
-//       return res.status(401).json({
-//         success: false,
-//         message: "Unauthorized",
-//       });
-//     }
-
-//     // ================= ADMIN CHECK =================
-//     if (
-//       req.files?.adminPolicyDocument &&
-//       req.user.role !== "admin"
-//     ) {
-//       return res.status(403).json({
-//         success: false,
-//         message:
-//           "Only admin can upload policy document",
-//       });
-//     }
-
-//     // ================= VALIDATION =================
-//     if (!carNo || !tp) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "carNo & tp are required",
-//       });
-//     }
-
-//     // ================= GET CLOUDINARY URLS =================
-//     const getFileUrls = (fieldName) => {
-//       return req.files?.[fieldName]?.map(
-//         (file) => file.path // Cloudinary URL
-//       ) || [];
-//     };
-
-//     const rcBookImages =
-//       getFileUrls("rcBookImages");
-
-//     const aadharCardImages =
-//       getFileUrls("aadharCardImages");
-
-//     const panCardImages =
-//       getFileUrls("panCardImages");
-
-//     const oldPolicyImages =
-//       getFileUrls("oldPolicyImages");
-
-//     const otherImages =
-//       getFileUrls("otherImages");
-
-//     const adminPolicyDocument =
-//       req.files?.adminPolicyDocument?.[0]
-//         ?.path || null;
-
-//     // ================= REQUIRED FILE CHECK =================
-//     if (
-//       rcBookImages.length === 0 ||
-//       aadharCardImages.length === 0
-//     ) {
-//       return res.status(400).json({
-//         success: false,
-//         message:
-//           "RC Book & Aadhar images are required",
-//       });
-//     }
-
-//     // ================= CREATE APPLICATION =================
-//     const app = await Application.create({
-//       user: userId,
-//       carNo,
-//       tp,
-//       mobileNo,
-//       otherDetails,
-
-//       rcBookImages,
-//       aadharCardImages,
-//       panCardImages,
-//       oldPolicyImages,
-//       otherImages,
-
-//       adminPolicyDocument,
-
-//       status: "pending",
-//     });
-
-//     // ================= SEND PUSH NOTIFICATION =================
-// try {
-//   // Find admin user
-//   const adminUser = await User.findOne({
-//     role: "admin",
-//   });
-
-//   // Check if admin has FCM token
-//   if (
-//     adminUser &&
-//     adminUser.fcmToken
-//   ) {
-//     await admin.messaging().send({
-//       token: adminUser.fcmToken,
-//       notification: {
-//         title:
-//           "New Insurance Application",
-//         body:
-//           `Car No: ${carNo} submitted by ${req.user.fullName}`,
-//       },
-//     });
-
-//     console.log(
-//       "✅ Notification sent"
-//     );
-//   } else {
-//     console.log(
-//       "❌ Admin FCM token not found"
-//     );
-//   }
-// } catch (notificationError) {
-//   console.log(
-//     "Notification Error:",
-//     notificationError
-//   );
-// }
-
-//     return res.status(201).json({
-//       success: true,
-//       message: "Application created successfully",
-//       data: app,
-//     });
-//   } catch (err) {
-//     console.error(
-//       "Create Application Error:",
-//       err
-//     );
-
-//     return res.status(500).json({
-//       success: false,
-//       message: err.message || "Server Error",
-//     });
-//   }
-// };
-exports.createApplication =
-  async (req, res) => {
-    try {
-      const {
-        carNo,
-        tp,
-        otherDetails,
-        mobileNo,
-      } = req.body;
-
-      const userId =
-        req.user?.id;
-
-      // ================= AUTH CHECK =================
-      if (!userId) {
-        return res
-          .status(401)
-          .json({
-            success: false,
-            message:
-              "Unauthorized",
-          });
-      }
-
-      // ================= ADMIN CHECK =================
-      if (
-        req.files
-          ?.adminPolicyDocument &&
-        req.user.role !==
-          "admin"
-      ) {
-        return res
-          .status(403)
-          .json({
-            success: false,
-            message:
-              "Only admin can upload policy document",
-          });
-      }
-
-      // ================= VALIDATION =================
-      if (!carNo || !tp) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "carNo & tp are required",
-          });
-      }
-
-      // ================= FILE HELPER =================
-      const getFileUrls =
-        (fieldName) => {
-          return (
-            req.files?.[
-              fieldName
-            ]?.map(
-              (file) =>
-                file.path
-            ) || []
-          );
-        };
-
-      const rcBookImages =
-        getFileUrls(
-          "rcBookImages"
-        );
-
-      const aadharCardImages =
-        getFileUrls(
-          "aadharCardImages"
-        );
-
-      const panCardImages =
-        getFileUrls(
-          "panCardImages"
-        );
-
-      const oldPolicyImages =
-        getFileUrls(
-          "oldPolicyImages"
-        );
-
-      const otherImages =
-        getFileUrls(
-          "otherImages"
-        );
-
-      const adminPolicyDocument =
-        req.files
-          ?.adminPolicyDocument?.[0]
-          ?.path || null;
-
-      // ================= REQUIRED FILE CHECK =================
-      if (
-        rcBookImages.length ===
-          0 ||
-        aadharCardImages
-          .length === 0
-      ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "RC Book & Aadhar images are required",
-          });
-      }
-
-      // ================= DOCUMENT OBJECT (IMPORTANT) =================
-      const documentData = {
-        rcBookImages,
-        aadharCardImages,
-        panCardImages,
-        oldPolicyImages,
-        otherImages,
-        adminPolicyDocument,
-        uploadedAt:
-          new Date(),
-        uploadedAfterReject:
-          false,
-      };
-
-      // ================= CREATE APPLICATION =================
-      const app =
-        await Application.create(
-          {
-            user: userId,
-            carNo,
-            tp,
-            mobileNo,
-            otherDetails,
-
-            status:
-              "pending",
-
-            // 👉 CURRENT LATEST DOCUMENT
-            currentDocuments:
-              documentData,
-
-            // 👉 HISTORY START
-            documentsHistory: [
-              documentData,
-            ],
-          }
-        );
-
-      // ================= PUSH NOTIFICATION =================
-      try {
-        const adminUser =
-          await User.findOne({
-            role: "admin",
-          });
-
-        if (
-          adminUser &&
-          adminUser.fcmToken
-        ) {
-          await admin
-            .messaging()
-            .send({
-              token:
-                adminUser.fcmToken,
-
-              notification: {
-                title:
-                  "New Insurance Application",
-                body: `Car No: ${carNo} submitted by ${req.user.fullName}`,
-              },
-            });
-
-          console.log(
-            "✅ Notification sent"
-          );
-        } else {
-          console.log(
-            "❌ Admin FCM token not found"
-          );
-        }
-      } catch (
-        notificationError
-      ) {
-        console.log(
-          "Notification Error:",
-          notificationError
-        );
-      }
-
-      return res
-        .status(201)
-        .json({
-          success: true,
-          message:
-            "Application created successfully",
-          data: app,
-        });
-    } catch (err) {
-      console.error(
-        "Create Application Error:",
-        err
-      );
-
-      return res
-        .status(500)
-        .json({
-          success: false,
-          message:
-            err.message ||
-            "Server Error",
-        });
+    // ================= AUTH CHECK =================
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
-  };
+
+    // ================= ADMIN CHECK =================
+    if (
+      req.files?.adminPolicyDocument &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Only admin can upload policy document",
+      });
+    }
+
+    // ================= VALIDATION =================
+    if (!carNo || !tp) {
+      return res.status(400).json({
+        success: false,
+        message: "carNo & tp are required",
+      });
+    }
+
+    // ================= GET CLOUDINARY URLS =================
+    const getFileUrls = (fieldName) => {
+      return req.files?.[fieldName]?.map(
+        (file) => file.path // Cloudinary URL
+      ) || [];
+    };
+
+    const rcBookImages =
+      getFileUrls("rcBookImages");
+
+    const aadharCardImages =
+      getFileUrls("aadharCardImages");
+
+    const panCardImages =
+      getFileUrls("panCardImages");
+
+    const oldPolicyImages =
+      getFileUrls("oldPolicyImages");
+
+    const otherImages =
+      getFileUrls("otherImages");
+
+    const adminPolicyDocument =
+      req.files?.adminPolicyDocument?.[0]
+        ?.path || null;
+
+    // ================= REQUIRED FILE CHECK =================
+    if (
+      rcBookImages.length === 0 ||
+      aadharCardImages.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "RC Book & Aadhar images are required",
+      });
+    }
+
+    // ================= CREATE APPLICATION =================
+    const app = await Application.create({
+      user: userId,
+      carNo,
+      tp,
+      mobileNo,
+      otherDetails,
+
+      rcBookImages,
+      aadharCardImages,
+      panCardImages,
+      oldPolicyImages,
+      otherImages,
+
+      adminPolicyDocument,
+
+      status: "pending",
+    });
+
+    // ================= SEND PUSH NOTIFICATION =================
+try {
+  // Find admin user
+  const adminUser = await User.findOne({
+    role: "admin",
+  });
+
+  // Check if admin has FCM token
+  if (
+    adminUser &&
+    adminUser.fcmToken
+  ) {
+    await admin.messaging().send({
+      token: adminUser.fcmToken,
+      notification: {
+        title:
+          "New Insurance Application",
+        body:
+          `Car No: ${carNo} submitted by ${req.user.fullName}`,
+      },
+    });
+
+    console.log(
+      "✅ Notification sent"
+    );
+  } else {
+    console.log(
+      "❌ Admin FCM token not found"
+    );
+  }
+} catch (notificationError) {
+  console.log(
+    "Notification Error:",
+    notificationError
+  );
+}
+
+    return res.status(201).json({
+      success: true,
+      message: "Application created successfully",
+      data: app,
+    });
+  } catch (err) {
+    console.error(
+      "Create Application Error:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server Error",
+    });
+  }
+};
+
 // ================= GET ALL (User wise) =================
 // ================= GET ALL (User wise + Admin) =================
 
@@ -515,7 +303,6 @@ const app = await Application.findById(req.params.id)
 };
 
 // ================= UPDATE =================
-
 exports.updateApplication = async (req, res) => {
   try {
     req.body = req.body || {};
@@ -523,9 +310,7 @@ exports.updateApplication = async (req, res) => {
     console.log("BODY:", req.body);
     console.log("FILES:", req.files);
 
-    const application = await Application.findById(
-      req.params.id
-    );
+    const application = await Application.findById(req.params.id);
 
     if (!application) {
       return res.status(404).json({
@@ -534,232 +319,392 @@ exports.updateApplication = async (req, res) => {
       });
     }
 
-    // ================= STATUS =================
- if (req.body.status?.trim()) {
-  const status = req.body.status.trim();
+    // ================= STATUS UPDATE =================
+    if (req.body.status?.trim()) {
+      const status = req.body.status.trim();
 
-  application.status = status;
+      application.status = status;
 
-
-      // ================= REJECT REASON =================
+      // Reject reason
       if (status === "rejected") {
-    application.rejectionReason =
-      req.body.rejectionReason
-        ? req.body.rejectionReason
-            .toString()
-            .trim()
-        : "";
-  }
+        application.rejectionReason = req.body.rejectionReason
+          ? req.body.rejectionReason.toString().trim()
+          : "";
+      }
 
-  if (status === "approved") {
-    application.rejectionReason = "";
-  }
-
+      // Clear rejection reason on approval
+      if (status === "approved") {
+        application.rejectionReason = "";
+      }
     }
 
-    // ================= MOBILE NUMBER =================
+    // ================= MOBILE UPDATE =================
     if (req.body.mobileNo?.trim()) {
-      application.mobileNo =
-        req.body.mobileNo.trim();
+      application.mobileNo = req.body.mobileNo.trim();
     }
 
     // ================= EXECUTIVE ASSIGN =================
     if (req.body.executiveId?.trim()) {
-      application.executive =
-        req.body.executiveId.trim();
+      application.executive = req.body.executiveId.trim();
 
       await Executive.findByIdAndUpdate(
         req.body.executiveId,
         {
           $addToSet: {
-            assignedApplications:
-              application._id,
+            assignedApplications: application._id,
           },
         }
       );
     }
 
-    // ================= IMAGE UPDATE FUNCTION =================
-    const updateImages = (fieldName) => {
-      if (
-        req.files &&
-        req.files[fieldName] &&
-        req.files[fieldName].length > 0
-      ) {
-        return req.files[fieldName].map(
-          (file) => file.path
-        );
-      }
-
-      return application[fieldName] || [];
+    // ================= CLOUDINARY FILE HELPER =================
+    const getFileUrls = (fieldName) => {
+      return req.files?.[fieldName]?.map((file) => file.path) || [];
     };
 
-    // ================= UPDATE IMAGES =================
-    if (
-      req.files &&
-      Object.keys(req.files).length > 0
-    ) {
-      application.rcBookImages =
-        updateImages("rcBookImages");
+    // ================= NEW DOCUMENT OBJECT =================
+    const newDocuments = {
+      rcBookImages: getFileUrls("rcBookImages"),
+      aadharCardImages: getFileUrls("aadharCardImages"),
+      panCardImages: getFileUrls("panCardImages"),
+      oldPolicyImages: getFileUrls("oldPolicyImages"),
+      otherImages: getFileUrls("otherImages"),
+      adminPolicyDocument:
+        req.files?.adminPolicyDocument?.[0]?.path || null,
 
-      application.aadharCardImages =
-        updateImages("aadharCardImages");
+      uploadedAt: new Date(),
+      uploadedAfterReject: application.status === "rejected",
+    };
 
-      application.panCardImages =
-        updateImages("panCardImages");
+    // ================= DOCUMENT UPDATE LOGIC =================
+    const hasFiles =
+      req.files && Object.keys(req.files).length > 0;
 
-      application.oldPolicyImages =
-        updateImages("oldPolicyImages");
+    if (hasFiles) {
+      // 1. ADD TO HISTORY (IMPORTANT)
+      application.documentsHistory.push(newDocuments);
 
-      application.otherImages =
-        updateImages("otherImages");
+      // 2. UPDATE CURRENT DOCUMENTS
+      application.currentDocuments = newDocuments;
 
-      // ================= POLICY DOCUMENT =================
-      if (
-        req.files.adminPolicyDocument &&
-        req.files.adminPolicyDocument.length >
-          0
-      ) {
-        application.adminPolicyDocument =
-          req.files.adminPolicyDocument[0]
-            .path;
-      }
-
-      // ================= RESET STATUS AFTER REUPLOAD =================
+      // 3. RESET STATUS AFTER REUPLOAD (REJECT FLOW)
       application.status = "pending";
-
-      // clear reject reason after reupload
       application.rejectionReason = "";
     }
 
     // ================= SAVE =================
     await application.save();
-    // ================= SEND NOTIFICATION TO DEALER =================
-try {
-  // user fetch karo
-  const dealer =
-    await User.findById(
-      application.user
-    );
 
-  if (
-    dealer &&
-    dealer.fcmToken
-  ) {
-    let title = "";
-    let body = "";
+    // ================= NOTIFICATION TO USER =================
+    try {
+      const dealer = await User.findById(application.user);
 
-    // Approved
-    if (
-      application.status ===
-      "approved"
-    ) {
-      title =
-        "Insurance Approved";
+      if (dealer && dealer.fcmToken) {
+        let title = "";
+        let body = "";
 
-      body = `Your application for vehicle ${application.carNo} has been approved`;
-    }
+        if (application.status === "approved") {
+          title = "Insurance Approved";
+          body = `Your application for vehicle ${application.carNo} has been approved`;
+        } 
+        else if (application.status === "rejected") {
+          title = "Insurance Rejected";
+          body = `Your application for vehicle ${application.carNo} has been rejected`;
 
-    // Rejected
-    else if (
-      application.status ===
-      "rejected"
-    ) {
-      title =
-        "Insurance Rejected";
+          if (application.rejectionReason) {
+            body += ` Reason: ${application.rejectionReason}`;
+          }
+        } 
+        else {
+          title = "Application Updated";
+          body = `Your application for vehicle ${application.carNo} is under review`;
+        }
 
-      body = `Your application for vehicle ${application.carNo} has been rejected`;
+        await admin.messaging().send({
+          token: dealer.fcmToken,
+          notification: {
+            title,
+            body,
+          },
+          data: {
+            applicationId: application._id.toString(),
+            status: application.status,
+          },
+        });
 
-      if (
-        application.rejectionReason
-      ) {
-        body += ` Reason: ${application.rejectionReason}`;
+        console.log("✅ Dealer notification sent");
+      } else {
+        console.log("❌ Dealer FCM token not found");
       }
+    } catch (notificationError) {
+      console.log("Notification Error:", notificationError);
     }
 
-    // Pending
-    else if (
-      application.status ===
-      "pending"
-    ) {
-      title =
-        "Application Updated";
-
-      body = `Your application for vehicle ${application.carNo} is under review`;
-    }
-
-    // send push notification
-    await admin
-      .messaging()
-      .send({
-        token:
-          dealer.fcmToken,
-
-        notification: {
-          title,
-          body,
-        },
-
-        data: {
-          applicationId:
-            application._id.toString(),
-
-          status:
-            application.status,
-        },
-      });
-
-    console.log(
-      "✅ Dealer notification sent"
-    );
-  } else {
-    console.log(
-      "❌ Dealer FCM token not found"
-    );
-  }
-} catch (
-  notificationError
-) {
-  console.log(
-    "Notification Error:",
-    notificationError
-  );
-}
-
-    // ================= GET UPDATED DATA =================
-    const updatedApplication =
-      await Application.findById(
-        application._id
-      )
-        .populate(
-          "user",
-          "fullName emailId mobileNumber"
-        )
-        .populate(
-          "executive",
-          "Name emailId mobileNumber"
-        );
+    // ================= RETURN UPDATED DATA =================
+    const updatedApplication = await Application.findById(application._id)
+      .populate("user", "fullName emailId mobileNumber")
+      .populate("executive", "Name emailId mobileNumber");
 
     return res.status(200).json({
       success: true,
-      message:
-        "Application updated successfully",
+      message: "Application updated successfully",
       data: updatedApplication,
     });
-  }
-   catch (error) {
-    console.log(
-      "UPDATE APPLICATION ERROR:",
-      error
-    );
+
+  } catch (error) {
+    console.log("UPDATE APPLICATION ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message:
-        error.message || "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
+
+// exports.updateApplication = async (req, res) => {
+//   try {
+//     req.body = req.body || {};
+
+//     console.log("BODY:", req.body);
+//     console.log("FILES:", req.files);
+
+//     const application = await Application.findById(
+//       req.params.id
+//     );
+
+//     if (!application) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Application not found",
+//       });
+//     }
+
+//     // ================= STATUS =================
+//  if (req.body.status?.trim()) {
+//   const status = req.body.status.trim();
+
+//   application.status = status;
+
+
+//       // ================= REJECT REASON =================
+//       if (status === "rejected") {
+//     application.rejectionReason =
+//       req.body.rejectionReason
+//         ? req.body.rejectionReason
+//             .toString()
+//             .trim()
+//         : "";
+//   }
+
+//   if (status === "approved") {
+//     application.rejectionReason = "";
+//   }
+
+//     }
+
+//     // ================= MOBILE NUMBER =================
+//     if (req.body.mobileNo?.trim()) {
+//       application.mobileNo =
+//         req.body.mobileNo.trim();
+//     }
+
+//     // ================= EXECUTIVE ASSIGN =================
+//     if (req.body.executiveId?.trim()) {
+//       application.executive =
+//         req.body.executiveId.trim();
+
+//       await Executive.findByIdAndUpdate(
+//         req.body.executiveId,
+//         {
+//           $addToSet: {
+//             assignedApplications:
+//               application._id,
+//           },
+//         }
+//       );
+//     }
+
+//     // ================= IMAGE UPDATE FUNCTION =================
+//     const updateImages = (fieldName) => {
+//       if (
+//         req.files &&
+//         req.files[fieldName] &&
+//         req.files[fieldName].length > 0
+//       ) {
+//         return req.files[fieldName].map(
+//           (file) => file.path
+//         );
+//       }
+
+//       return application[fieldName] || [];
+//     };
+
+//     // ================= UPDATE IMAGES =================
+//     if (
+//       req.files &&
+//       Object.keys(req.files).length > 0
+//     ) {
+//       application.rcBookImages =
+//         updateImages("rcBookImages");
+
+//       application.aadharCardImages =
+//         updateImages("aadharCardImages");
+
+//       application.panCardImages =
+//         updateImages("panCardImages");
+
+//       application.oldPolicyImages =
+//         updateImages("oldPolicyImages");
+
+//       application.otherImages =
+//         updateImages("otherImages");
+
+//       // ================= POLICY DOCUMENT =================
+//       if (
+//         req.files.adminPolicyDocument &&
+//         req.files.adminPolicyDocument.length >
+//           0
+//       ) {
+//         application.adminPolicyDocument =
+//           req.files.adminPolicyDocument[0]
+//             .path;
+//       }
+
+//       // ================= RESET STATUS AFTER REUPLOAD =================
+//       application.status = "pending";
+
+//       // clear reject reason after reupload
+//       application.rejectionReason = "";
+//     }
+
+//     // ================= SAVE =================
+//     await application.save();
+//     // ================= SEND NOTIFICATION TO DEALER =================
+// try {
+//   // user fetch karo
+//   const dealer =
+//     await User.findById(
+//       application.user
+//     );
+
+//   if (
+//     dealer &&
+//     dealer.fcmToken
+//   ) {
+//     let title = "";
+//     let body = "";
+
+//     // Approved
+//     if (
+//       application.status ===
+//       "approved"
+//     ) {
+//       title =
+//         "Insurance Approved";
+
+//       body = `Your application for vehicle ${application.carNo} has been approved`;
+//     }
+
+//     // Rejected
+//     else if (
+//       application.status ===
+//       "rejected"
+//     ) {
+//       title =
+//         "Insurance Rejected";
+
+//       body = `Your application for vehicle ${application.carNo} has been rejected`;
+
+//       if (
+//         application.rejectionReason
+//       ) {
+//         body += ` Reason: ${application.rejectionReason}`;
+//       }
+//     }
+
+//     // Pending
+//     else if (
+//       application.status ===
+//       "pending"
+//     ) {
+//       title =
+//         "Application Updated";
+
+//       body = `Your application for vehicle ${application.carNo} is under review`;
+//     }
+
+//     // send push notification
+//     await admin
+//       .messaging()
+//       .send({
+//         token:
+//           dealer.fcmToken,
+
+//         notification: {
+//           title,
+//           body,
+//         },
+
+//         data: {
+//           applicationId:
+//             application._id.toString(),
+
+//           status:
+//             application.status,
+//         },
+//       });
+
+//     console.log(
+//       "✅ Dealer notification sent"
+//     );
+//   } else {
+//     console.log(
+//       "❌ Dealer FCM token not found"
+//     );
+//   }
+// } catch (
+//   notificationError
+// ) {
+//   console.log(
+//     "Notification Error:",
+//     notificationError
+//   );
+// }
+
+//     // ================= GET UPDATED DATA =================
+//     const updatedApplication =
+//       await Application.findById(
+//         application._id
+//       )
+//         .populate(
+//           "user",
+//           "fullName emailId mobileNumber"
+//         )
+//         .populate(
+//           "executive",
+//           "Name emailId mobileNumber"
+//         );
+
+//     return res.status(200).json({
+//       success: true,
+//       message:
+//         "Application updated successfully",
+//       data: updatedApplication,
+//     });
+//   }
+//    catch (error) {
+//     console.log(
+//       "UPDATE APPLICATION ERROR:",
+//       error
+//     );
+
+//     return res.status(500).json({
+//       success: false,
+//       message:
+//         error.message || "Server Error",
+//     });
+//   }
+// };
 
 // exports.updateApplication = async (req, res) => {
 //   try {
