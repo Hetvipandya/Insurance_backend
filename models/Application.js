@@ -5,7 +5,7 @@ const applicationSchema = new mongoose.Schema(
     applicationId: {
       type: String,
       unique: true,
-    },
+    }, 
 
     user: {
       type: mongoose.Schema.Types.ObjectId,

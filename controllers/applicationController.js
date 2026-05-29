@@ -46,30 +46,96 @@ exports.createApplication = async (req, res) => {
       ) || [];
     };
 
+    // const rcBookImages =
+    //   getFileUrls("rcBookImages");
+
+    // const aadharCardImages =
+    //   getFileUrls("aadharCardImages");
+
+    // const panCardImages =
+    //   getFileUrls("panCardImages");
+
+    // const oldPolicyImages =
+    //   getFileUrls("oldPolicyImages");
+
+    // const otherImages =
+    //   getFileUrls("otherImages");
     const rcBookImages =
-      getFileUrls("rcBookImages");
+  [
+    {
+      urls:
+        getFileUrls(
+          "rcBookImages"
+        ),
+      uploadedAfterReject:
+        false,
+    },
+  ];
 
-    const aadharCardImages =
-      getFileUrls("aadharCardImages");
+const aadharCardImages =
+  [
+    {
+      urls:
+        getFileUrls(
+          "aadharCardImages"
+        ),
+      uploadedAfterReject:
+        false,
+    },
+  ];
 
-    const panCardImages =
-      getFileUrls("panCardImages");
+const panCardImages =
+  [
+    {
+      urls:
+        getFileUrls(
+          "panCardImages"
+        ),
+      uploadedAfterReject:
+        false,
+    },
+  ];
 
-    const oldPolicyImages =
-      getFileUrls("oldPolicyImages");
+const oldPolicyImages =
+  [
+    {
+      urls:
+        getFileUrls(
+          "oldPolicyImages"
+        ),
+      uploadedAfterReject:
+        false,
+    },
+  ];
 
-    const otherImages =
-      getFileUrls("otherImages");
+const otherImages =
+  [
+    {
+      urls:
+        getFileUrls(
+          "otherImages"
+        ),
+      uploadedAfterReject:
+        false,
+    },
+  ];
 
     const adminPolicyDocument =
       req.files?.adminPolicyDocument?.[0]
         ?.path || null;
 
     // ================= REQUIRED FILE CHECK =================
+    // if (
+    //   rcBookImages.length === 0 ||
+    //   aadharCardImages.length === 0
+    // ) 
     if (
-      rcBookImages.length === 0 ||
-      aadharCardImages.length === 0
-    ) {
+  rcBookImages[0].urls
+    .length === 0 ||
+  aadharCardImages[0]
+    .urls.length === 0
+)
+    {
       return res.status(400).json({
         success: false,
         message:
@@ -383,24 +449,124 @@ exports.updateApplication = async (req, res) => {
     };
 
     // ================= UPDATE IMAGES =================
+// ================= DOCUMENT UPDATE =================
+const addNewDocuments =
+  (fieldName) => {
     if (
-      req.files &&
-      Object.keys(req.files).length > 0
+      req.files?.[
+        fieldName
+      ]?.length > 0
     ) {
-      application.rcBookImages =
-        updateImages("rcBookImages");
+      // only rejected app can upload
+      if (
+        application.status !==
+        "rejected"
+      ) {
+        throw new Error(
+          `${fieldName} is locked until application is rejected`
+        );
+      }
 
-      application.aadharCardImages =
-        updateImages("aadharCardImages");
+      const newFiles =
+        req.files[
+          fieldName
+        ].map(
+          (file) =>
+            file.path
+        );
 
-      application.panCardImages =
-        updateImages("panCardImages");
+      // backward compatibility
+      if (
+        Array.isArray(
+          application[
+            fieldName
+          ]
+        ) &&
+        application[
+          fieldName
+        ].length > 0 &&
+        typeof application[
+          fieldName
+        ][0] ===
+          "string"
+      ) {
+        application[
+          fieldName
+        ] = [
+          {
+            urls:
+              application[
+                fieldName
+              ],
+            uploadedAfterReject:
+              false,
+          },
+        ];
+      }
 
-      application.oldPolicyImages =
-        updateImages("oldPolicyImages");
+      // add new docs
+      application[
+        fieldName
+      ].push({
+        urls: newFiles,
+        uploadedAfterReject:
+          true,
+        uploadedAt:
+          new Date(),
+      });
+    }
+  };
 
-      application.otherImages =
-        updateImages("otherImages");
+// ================= DOCUMENT REUPLOAD =================
+if (
+  req.files &&
+  Object.keys(req.files)
+    .length > 0
+) {
+  addNewDocuments(
+    "rcBookImages"
+  );
+
+  addNewDocuments(
+    "aadharCardImages"
+  );
+
+  addNewDocuments(
+    "panCardImages"
+  );
+
+  addNewDocuments(
+    "oldPolicyImages"
+  );
+
+  addNewDocuments(
+    "otherImages"
+  );
+
+  // ================= POLICY DOCUMENT =================
+  if (
+    req.files
+      ?.adminPolicyDocument
+      ?.length > 0
+  ) {
+    application.adminPolicyDocument =
+      req.files
+        .adminPolicyDocument[0]
+        .path;
+  }
+
+  // reset status after reupload
+  if (
+    application.status ===
+    "rejected"
+  ) {
+    application.status =
+      "pending";
+
+    application.rejectionReason =
+      "";
+  }
+}
 
       // ================= POLICY DOCUMENT =================
       if (
