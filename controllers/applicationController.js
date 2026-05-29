@@ -4,153 +4,365 @@ const admin = require("../utils/firebaseAdmin");
 const User = require("../models/User");
 
 // ================= CREATE =================
-exports.createApplication = async (req, res) => {
-  try {
-    const { carNo, tp, otherDetails, mobileNo } =
-      req.body;
+// exports.createApplication = async (req, res) => {
+//   try {
+//     const { carNo, tp, otherDetails, mobileNo } =
+//       req.body;
 
-    const userId = req.user?.id;
+//     const userId = req.user?.id;
 
-    // ================= AUTH CHECK =================
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
+//     // ================= AUTH CHECK =================
+//     if (!userId) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Unauthorized",
+//       });
+//     }
+
+//     // ================= ADMIN CHECK =================
+//     if (
+//       req.files?.adminPolicyDocument &&
+//       req.user.role !== "admin"
+//     ) {
+//       return res.status(403).json({
+//         success: false,
+//         message:
+//           "Only admin can upload policy document",
+//       });
+//     }
+
+//     // ================= VALIDATION =================
+//     if (!carNo || !tp) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "carNo & tp are required",
+//       });
+//     }
+
+//     // ================= GET CLOUDINARY URLS =================
+//     const getFileUrls = (fieldName) => {
+//       return req.files?.[fieldName]?.map(
+//         (file) => file.path // Cloudinary URL
+//       ) || [];
+//     };
+
+//     const rcBookImages =
+//       getFileUrls("rcBookImages");
+
+//     const aadharCardImages =
+//       getFileUrls("aadharCardImages");
+
+//     const panCardImages =
+//       getFileUrls("panCardImages");
+
+//     const oldPolicyImages =
+//       getFileUrls("oldPolicyImages");
+
+//     const otherImages =
+//       getFileUrls("otherImages");
+
+//     const adminPolicyDocument =
+//       req.files?.adminPolicyDocument?.[0]
+//         ?.path || null;
+
+//     // ================= REQUIRED FILE CHECK =================
+//     if (
+//       rcBookImages.length === 0 ||
+//       aadharCardImages.length === 0
+//     ) {
+//       return res.status(400).json({
+//         success: false,
+//         message:
+//           "RC Book & Aadhar images are required",
+//       });
+//     }
+
+//     // ================= CREATE APPLICATION =================
+//     const app = await Application.create({
+//       user: userId,
+//       carNo,
+//       tp,
+//       mobileNo,
+//       otherDetails,
+
+//       rcBookImages,
+//       aadharCardImages,
+//       panCardImages,
+//       oldPolicyImages,
+//       otherImages,
+
+//       adminPolicyDocument,
+
+//       status: "pending",
+//     });
+
+//     // ================= SEND PUSH NOTIFICATION =================
+// try {
+//   // Find admin user
+//   const adminUser = await User.findOne({
+//     role: "admin",
+//   });
+
+//   // Check if admin has FCM token
+//   if (
+//     adminUser &&
+//     adminUser.fcmToken
+//   ) {
+//     await admin.messaging().send({
+//       token: adminUser.fcmToken,
+//       notification: {
+//         title:
+//           "New Insurance Application",
+//         body:
+//           `Car No: ${carNo} submitted by ${req.user.fullName}`,
+//       },
+//     });
+
+//     console.log(
+//       "✅ Notification sent"
+//     );
+//   } else {
+//     console.log(
+//       "❌ Admin FCM token not found"
+//     );
+//   }
+// } catch (notificationError) {
+//   console.log(
+//     "Notification Error:",
+//     notificationError
+//   );
+// }
+
+//     return res.status(201).json({
+//       success: true,
+//       message: "Application created successfully",
+//       data: app,
+//     });
+//   } catch (err) {
+//     console.error(
+//       "Create Application Error:",
+//       err
+//     );
+
+//     return res.status(500).json({
+//       success: false,
+//       message: err.message || "Server Error",
+//     });
+//   }
+// };
+exports.createApplication =
+  async (req, res) => {
+    try {
+      const {
+        carNo,
+        tp,
+        otherDetails,
+        mobileNo,
+      } = req.body;
+
+      const userId =
+        req.user?.id;
+
+      // ================= AUTH CHECK =================
+      if (!userId) {
+        return res
+          .status(401)
+          .json({
+            success: false,
+            message:
+              "Unauthorized",
+          });
+      }
+
+      // ================= ADMIN CHECK =================
+      if (
+        req.files
+          ?.adminPolicyDocument &&
+        req.user.role !==
+          "admin"
+      ) {
+        return res
+          .status(403)
+          .json({
+            success: false,
+            message:
+              "Only admin can upload policy document",
+          });
+      }
+
+      // ================= VALIDATION =================
+      if (!carNo || !tp) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "carNo & tp are required",
+          });
+      }
+
+      // ================= FILE HELPER =================
+      const getFileUrls =
+        (fieldName) => {
+          return (
+            req.files?.[
+              fieldName
+            ]?.map(
+              (file) =>
+                file.path
+            ) || []
+          );
+        };
+
+      const rcBookImages =
+        getFileUrls(
+          "rcBookImages"
+        );
+
+      const aadharCardImages =
+        getFileUrls(
+          "aadharCardImages"
+        );
+
+      const panCardImages =
+        getFileUrls(
+          "panCardImages"
+        );
+
+      const oldPolicyImages =
+        getFileUrls(
+          "oldPolicyImages"
+        );
+
+      const otherImages =
+        getFileUrls(
+          "otherImages"
+        );
+
+      const adminPolicyDocument =
+        req.files
+          ?.adminPolicyDocument?.[0]
+          ?.path || null;
+
+      // ================= REQUIRED FILE CHECK =================
+      if (
+        rcBookImages.length ===
+          0 ||
+        aadharCardImages
+          .length === 0
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "RC Book & Aadhar images are required",
+          });
+      }
+
+      // ================= DOCUMENT OBJECT (IMPORTANT) =================
+      const documentData = {
+        rcBookImages,
+        aadharCardImages,
+        panCardImages,
+        oldPolicyImages,
+        otherImages,
+        adminPolicyDocument,
+        uploadedAt:
+          new Date(),
+        uploadedAfterReject:
+          false,
+      };
+
+      // ================= CREATE APPLICATION =================
+      const app =
+        await Application.create(
+          {
+            user: userId,
+            carNo,
+            tp,
+            mobileNo,
+            otherDetails,
+
+            status:
+              "pending",
+
+            // 👉 CURRENT LATEST DOCUMENT
+            currentDocuments:
+              documentData,
+
+            // 👉 HISTORY START
+            documentsHistory: [
+              documentData,
+            ],
+          }
+        );
+
+      // ================= PUSH NOTIFICATION =================
+      try {
+        const adminUser =
+          await User.findOne({
+            role: "admin",
+          });
+
+        if (
+          adminUser &&
+          adminUser.fcmToken
+        ) {
+          await admin
+            .messaging()
+            .send({
+              token:
+                adminUser.fcmToken,
+
+              notification: {
+                title:
+                  "New Insurance Application",
+                body: `Car No: ${carNo} submitted by ${req.user.fullName}`,
+              },
+            });
+
+          console.log(
+            "✅ Notification sent"
+          );
+        } else {
+          console.log(
+            "❌ Admin FCM token not found"
+          );
+        }
+      } catch (
+        notificationError
+      ) {
+        console.log(
+          "Notification Error:",
+          notificationError
+        );
+      }
+
+      return res
+        .status(201)
+        .json({
+          success: true,
+          message:
+            "Application created successfully",
+          data: app,
+        });
+    } catch (err) {
+      console.error(
+        "Create Application Error:",
+        err
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            err.message ||
+            "Server Error",
+        });
     }
-
-    // ================= ADMIN CHECK =================
-    if (
-      req.files?.adminPolicyDocument &&
-      req.user.role !== "admin"
-    ) {
-      return res.status(403).json({
-        success: false,
-        message:
-          "Only admin can upload policy document",
-      });
-    }
-
-    // ================= VALIDATION =================
-    if (!carNo || !tp) {
-      return res.status(400).json({
-        success: false,
-        message: "carNo & tp are required",
-      });
-    }
-
-    // ================= GET CLOUDINARY URLS =================
-    const getFileUrls = (fieldName) => {
-      return req.files?.[fieldName]?.map(
-        (file) => file.path // Cloudinary URL
-      ) || [];
-    };
-
-    const rcBookImages =
-      getFileUrls("rcBookImages");
-
-    const aadharCardImages =
-      getFileUrls("aadharCardImages");
-
-    const panCardImages =
-      getFileUrls("panCardImages");
-
-    const oldPolicyImages =
-      getFileUrls("oldPolicyImages");
-
-    const otherImages =
-      getFileUrls("otherImages");
-
-    const adminPolicyDocument =
-      req.files?.adminPolicyDocument?.[0]
-        ?.path || null;
-
-    // ================= REQUIRED FILE CHECK =================
-    if (
-      rcBookImages.length === 0 ||
-      aadharCardImages.length === 0
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "RC Book & Aadhar images are required",
-      });
-    }
-
-    // ================= CREATE APPLICATION =================
-    const app = await Application.create({
-      user: userId,
-      carNo,
-      tp,
-      mobileNo,
-      otherDetails,
-
-      rcBookImages,
-      aadharCardImages,
-      panCardImages,
-      oldPolicyImages,
-      otherImages,
-
-      adminPolicyDocument,
-
-      status: "pending",
-    });
-
-    // ================= SEND PUSH NOTIFICATION =================
-try {
-  // Find admin user
-  const adminUser = await User.findOne({
-    role: "admin",
-  });
-
-  // Check if admin has FCM token
-  if (
-    adminUser &&
-    adminUser.fcmToken
-  ) {
-    await admin.messaging().send({
-      token: adminUser.fcmToken,
-      notification: {
-        title:
-          "New Insurance Application",
-        body:
-          `Car No: ${carNo} submitted by ${req.user.fullName}`,
-      },
-    });
-
-    console.log(
-      "✅ Notification sent"
-    );
-  } else {
-    console.log(
-      "❌ Admin FCM token not found"
-    );
-  }
-} catch (notificationError) {
-  console.log(
-    "Notification Error:",
-    notificationError
-  );
-}
-
-    return res.status(201).json({
-      success: true,
-      message: "Application created successfully",
-      data: app,
-    });
-  } catch (err) {
-    console.error(
-      "Create Application Error:",
-      err
-    );
-
-    return res.status(500).json({
-      success: false,
-      message: err.message || "Server Error",
-    });
-  }
-};
-
+  };
 // ================= GET ALL (User wise) =================
 // ================= GET ALL (User wise + Admin) =================
 
