@@ -303,6 +303,7 @@ const app = await Application.findById(req.params.id)
 };
 
 // ================= UPDATE =================
+
 exports.updateApplication = async (req, res) => {
   try {
     req.body = req.body || {};
@@ -310,7 +311,9 @@ exports.updateApplication = async (req, res) => {
     console.log("BODY:", req.body);
     console.log("FILES:", req.files);
 
-    const application = await Application.findById(req.params.id);
+    const application = await Application.findById(
+      req.params.id
+    );
 
     if (!application) {
       return res.status(404).json({
@@ -319,392 +322,232 @@ exports.updateApplication = async (req, res) => {
       });
     }
 
-    // ================= STATUS UPDATE =================
-    if (req.body.status?.trim()) {
-      const status = req.body.status.trim();
+    // ================= STATUS =================
+ if (req.body.status?.trim()) {
+  const status = req.body.status.trim();
 
-      application.status = status;
+  application.status = status;
 
-      // Reject reason
+
+      // ================= REJECT REASON =================
       if (status === "rejected") {
-        application.rejectionReason = req.body.rejectionReason
-          ? req.body.rejectionReason.toString().trim()
-          : "";
-      }
+    application.rejectionReason =
+      req.body.rejectionReason
+        ? req.body.rejectionReason
+            .toString()
+            .trim()
+        : "";
+  }
 
-      // Clear rejection reason on approval
-      if (status === "approved") {
-        application.rejectionReason = "";
-      }
+  if (status === "approved") {
+    application.rejectionReason = "";
+  }
+
     }
 
-    // ================= MOBILE UPDATE =================
+    // ================= MOBILE NUMBER =================
     if (req.body.mobileNo?.trim()) {
-      application.mobileNo = req.body.mobileNo.trim();
+      application.mobileNo =
+        req.body.mobileNo.trim();
     }
 
     // ================= EXECUTIVE ASSIGN =================
     if (req.body.executiveId?.trim()) {
-      application.executive = req.body.executiveId.trim();
+      application.executive =
+        req.body.executiveId.trim();
 
       await Executive.findByIdAndUpdate(
         req.body.executiveId,
         {
           $addToSet: {
-            assignedApplications: application._id,
+            assignedApplications:
+              application._id,
           },
         }
       );
     }
 
-    // ================= CLOUDINARY FILE HELPER =================
-    const getFileUrls = (fieldName) => {
-      return req.files?.[fieldName]?.map((file) => file.path) || [];
+    // ================= IMAGE UPDATE FUNCTION =================
+    const updateImages = (fieldName) => {
+      if (
+        req.files &&
+        req.files[fieldName] &&
+        req.files[fieldName].length > 0
+      ) {
+        return req.files[fieldName].map(
+          (file) => file.path
+        );
+      }
+
+      return application[fieldName] || [];
     };
 
-    // ================= NEW DOCUMENT OBJECT =================
-    const newDocuments = {
-      rcBookImages: getFileUrls("rcBookImages"),
-      aadharCardImages: getFileUrls("aadharCardImages"),
-      panCardImages: getFileUrls("panCardImages"),
-      oldPolicyImages: getFileUrls("oldPolicyImages"),
-      otherImages: getFileUrls("otherImages"),
-      adminPolicyDocument:
-        req.files?.adminPolicyDocument?.[0]?.path || null,
+    // ================= UPDATE IMAGES =================
+    if (
+      req.files &&
+      Object.keys(req.files).length > 0
+    ) {
+      application.rcBookImages =
+        updateImages("rcBookImages");
 
-      uploadedAt: new Date(),
-      uploadedAfterReject: application.status === "rejected",
-    };
+      application.aadharCardImages =
+        updateImages("aadharCardImages");
 
-    // ================= DOCUMENT UPDATE LOGIC =================
-    const hasFiles =
-      req.files && Object.keys(req.files).length > 0;
+      application.panCardImages =
+        updateImages("panCardImages");
 
-    if (hasFiles) {
-      // 1. ADD TO HISTORY (IMPORTANT)
-      application.documentsHistory.push(newDocuments);
+      application.oldPolicyImages =
+        updateImages("oldPolicyImages");
 
-      // 2. UPDATE CURRENT DOCUMENTS
-      application.currentDocuments = newDocuments;
+      application.otherImages =
+        updateImages("otherImages");
 
-      // 3. RESET STATUS AFTER REUPLOAD (REJECT FLOW)
+      // ================= POLICY DOCUMENT =================
+      if (
+        req.files.adminPolicyDocument &&
+        req.files.adminPolicyDocument.length >
+          0
+      ) {
+        application.adminPolicyDocument =
+          req.files.adminPolicyDocument[0]
+            .path;
+      }
+
+      // ================= RESET STATUS AFTER REUPLOAD =================
       application.status = "pending";
+
+      // clear reject reason after reupload
       application.rejectionReason = "";
     }
 
     // ================= SAVE =================
     await application.save();
+    // ================= SEND NOTIFICATION TO DEALER =================
+try {
+  // user fetch karo
+  const dealer =
+    await User.findById(
+      application.user
+    );
 
-    // ================= NOTIFICATION TO USER =================
-    try {
-      const dealer = await User.findById(application.user);
+  if (
+    dealer &&
+    dealer.fcmToken
+  ) {
+    let title = "";
+    let body = "";
 
-      if (dealer && dealer.fcmToken) {
-        let title = "";
-        let body = "";
+    // Approved
+    if (
+      application.status ===
+      "approved"
+    ) {
+      title =
+        "Insurance Approved";
 
-        if (application.status === "approved") {
-          title = "Insurance Approved";
-          body = `Your application for vehicle ${application.carNo} has been approved`;
-        } 
-        else if (application.status === "rejected") {
-          title = "Insurance Rejected";
-          body = `Your application for vehicle ${application.carNo} has been rejected`;
-
-          if (application.rejectionReason) {
-            body += ` Reason: ${application.rejectionReason}`;
-          }
-        } 
-        else {
-          title = "Application Updated";
-          body = `Your application for vehicle ${application.carNo} is under review`;
-        }
-
-        await admin.messaging().send({
-          token: dealer.fcmToken,
-          notification: {
-            title,
-            body,
-          },
-          data: {
-            applicationId: application._id.toString(),
-            status: application.status,
-          },
-        });
-
-        console.log("✅ Dealer notification sent");
-      } else {
-        console.log("❌ Dealer FCM token not found");
-      }
-    } catch (notificationError) {
-      console.log("Notification Error:", notificationError);
+      body = `Your application for vehicle ${application.carNo} has been approved`;
     }
 
-    // ================= RETURN UPDATED DATA =================
-    const updatedApplication = await Application.findById(application._id)
-      .populate("user", "fullName emailId mobileNumber")
-      .populate("executive", "Name emailId mobileNumber");
+    // Rejected
+    else if (
+      application.status ===
+      "rejected"
+    ) {
+      title =
+        "Insurance Rejected";
+
+      body = `Your application for vehicle ${application.carNo} has been rejected`;
+
+      if (
+        application.rejectionReason
+      ) {
+        body += ` Reason: ${application.rejectionReason}`;
+      }
+    }
+
+    // Pending
+    else if (
+      application.status ===
+      "pending"
+    ) {
+      title =
+        "Application Updated";
+
+      body = `Your application for vehicle ${application.carNo} is under review`;
+    }
+
+    // send push notification
+    await admin
+      .messaging()
+      .send({
+        token:
+          dealer.fcmToken,
+
+        notification: {
+          title,
+          body,
+        },
+
+        data: {
+          applicationId:
+            application._id.toString(),
+
+          status:
+            application.status,
+        },
+      });
+
+    console.log(
+      "✅ Dealer notification sent"
+    );
+  } else {
+    console.log(
+      "❌ Dealer FCM token not found"
+    );
+  }
+} catch (
+  notificationError
+) {
+  console.log(
+    "Notification Error:",
+    notificationError
+  );
+}
+
+    // ================= GET UPDATED DATA =================
+    const updatedApplication =
+      await Application.findById(
+        application._id
+      )
+        .populate(
+          "user",
+          "fullName emailId mobileNumber"
+        )
+        .populate(
+          "executive",
+          "Name emailId mobileNumber"
+        );
 
     return res.status(200).json({
       success: true,
-      message: "Application updated successfully",
+      message:
+        "Application updated successfully",
       data: updatedApplication,
     });
-
-  } catch (error) {
-    console.log("UPDATE APPLICATION ERROR:", error);
+  }
+   catch (error) {
+    console.log(
+      "UPDATE APPLICATION ERROR:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message:
+        error.message || "Server Error",
     });
   }
 };
-
-// exports.updateApplication = async (req, res) => {
-//   try {
-//     req.body = req.body || {};
-
-//     console.log("BODY:", req.body);
-//     console.log("FILES:", req.files);
-
-//     const application = await Application.findById(
-//       req.params.id
-//     );
-
-//     if (!application) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Application not found",
-//       });
-//     }
-
-//     // ================= STATUS =================
-//  if (req.body.status?.trim()) {
-//   const status = req.body.status.trim();
-
-//   application.status = status;
-
-
-//       // ================= REJECT REASON =================
-//       if (status === "rejected") {
-//     application.rejectionReason =
-//       req.body.rejectionReason
-//         ? req.body.rejectionReason
-//             .toString()
-//             .trim()
-//         : "";
-//   }
-
-//   if (status === "approved") {
-//     application.rejectionReason = "";
-//   }
-
-//     }
-
-//     // ================= MOBILE NUMBER =================
-//     if (req.body.mobileNo?.trim()) {
-//       application.mobileNo =
-//         req.body.mobileNo.trim();
-//     }
-
-//     // ================= EXECUTIVE ASSIGN =================
-//     if (req.body.executiveId?.trim()) {
-//       application.executive =
-//         req.body.executiveId.trim();
-
-//       await Executive.findByIdAndUpdate(
-//         req.body.executiveId,
-//         {
-//           $addToSet: {
-//             assignedApplications:
-//               application._id,
-//           },
-//         }
-//       );
-//     }
-
-//     // ================= IMAGE UPDATE FUNCTION =================
-//     const updateImages = (fieldName) => {
-//       if (
-//         req.files &&
-//         req.files[fieldName] &&
-//         req.files[fieldName].length > 0
-//       ) {
-//         return req.files[fieldName].map(
-//           (file) => file.path
-//         );
-//       }
-
-//       return application[fieldName] || [];
-//     };
-
-//     // ================= UPDATE IMAGES =================
-//     if (
-//       req.files &&
-//       Object.keys(req.files).length > 0
-//     ) {
-//       application.rcBookImages =
-//         updateImages("rcBookImages");
-
-//       application.aadharCardImages =
-//         updateImages("aadharCardImages");
-
-//       application.panCardImages =
-//         updateImages("panCardImages");
-
-//       application.oldPolicyImages =
-//         updateImages("oldPolicyImages");
-
-//       application.otherImages =
-//         updateImages("otherImages");
-
-//       // ================= POLICY DOCUMENT =================
-//       if (
-//         req.files.adminPolicyDocument &&
-//         req.files.adminPolicyDocument.length >
-//           0
-//       ) {
-//         application.adminPolicyDocument =
-//           req.files.adminPolicyDocument[0]
-//             .path;
-//       }
-
-//       // ================= RESET STATUS AFTER REUPLOAD =================
-//       application.status = "pending";
-
-//       // clear reject reason after reupload
-//       application.rejectionReason = "";
-//     }
-
-//     // ================= SAVE =================
-//     await application.save();
-//     // ================= SEND NOTIFICATION TO DEALER =================
-// try {
-//   // user fetch karo
-//   const dealer =
-//     await User.findById(
-//       application.user
-//     );
-
-//   if (
-//     dealer &&
-//     dealer.fcmToken
-//   ) {
-//     let title = "";
-//     let body = "";
-
-//     // Approved
-//     if (
-//       application.status ===
-//       "approved"
-//     ) {
-//       title =
-//         "Insurance Approved";
-
-//       body = `Your application for vehicle ${application.carNo} has been approved`;
-//     }
-
-//     // Rejected
-//     else if (
-//       application.status ===
-//       "rejected"
-//     ) {
-//       title =
-//         "Insurance Rejected";
-
-//       body = `Your application for vehicle ${application.carNo} has been rejected`;
-
-//       if (
-//         application.rejectionReason
-//       ) {
-//         body += ` Reason: ${application.rejectionReason}`;
-//       }
-//     }
-
-//     // Pending
-//     else if (
-//       application.status ===
-//       "pending"
-//     ) {
-//       title =
-//         "Application Updated";
-
-//       body = `Your application for vehicle ${application.carNo} is under review`;
-//     }
-
-//     // send push notification
-//     await admin
-//       .messaging()
-//       .send({
-//         token:
-//           dealer.fcmToken,
-
-//         notification: {
-//           title,
-//           body,
-//         },
-
-//         data: {
-//           applicationId:
-//             application._id.toString(),
-
-//           status:
-//             application.status,
-//         },
-//       });
-
-//     console.log(
-//       "✅ Dealer notification sent"
-//     );
-//   } else {
-//     console.log(
-//       "❌ Dealer FCM token not found"
-//     );
-//   }
-// } catch (
-//   notificationError
-// ) {
-//   console.log(
-//     "Notification Error:",
-//     notificationError
-//   );
-// }
-
-//     // ================= GET UPDATED DATA =================
-//     const updatedApplication =
-//       await Application.findById(
-//         application._id
-//       )
-//         .populate(
-//           "user",
-//           "fullName emailId mobileNumber"
-//         )
-//         .populate(
-//           "executive",
-//           "Name emailId mobileNumber"
-//         );
-
-//     return res.status(200).json({
-//       success: true,
-//       message:
-//         "Application updated successfully",
-//       data: updatedApplication,
-//     });
-//   }
-//    catch (error) {
-//     console.log(
-//       "UPDATE APPLICATION ERROR:",
-//       error
-//     );
-
-//     return res.status(500).json({
-//       success: false,
-//       message:
-//         error.message || "Server Error",
-//     });
-//   }
-// };
 
 // exports.updateApplication = async (req, res) => {
 //   try {
