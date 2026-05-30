@@ -383,7 +383,7 @@ exports.updateApplication = async (req, res) => {
     };
 
     // ================= UPDATE IMAGES =================
-    // ================= STORE NEW DOCUMENTS =================
+    // ================= HANDLE DOCUMENT UPDATE =================
 if (
   req.files &&
   Object.keys(req.files).length > 0
@@ -403,6 +403,7 @@ if (
           (file) => file.path
         );
 
+      // save history
       application.newDocuments[
         fieldName
       ].push({
@@ -414,9 +415,16 @@ if (
           application.status ===
           "rejected",
       });
+
+      // IMPORTANT:
+      // replace current images
+      application[
+        fieldName
+      ] = uploadedFiles;
     }
   };
 
+  // update docs
   addNewDocument(
     "rcBookImages"
   );
@@ -437,7 +445,7 @@ if (
     "otherImages"
   );
 
-  // admin policy document
+  // ================= POLICY DOCUMENT =================
   if (
     req.files
       .adminPolicyDocument &&
@@ -451,6 +459,7 @@ if (
         .path;
   }
 
+  // if rejected and dealer uploads again
   // reset status
   application.status =
     "pending";
