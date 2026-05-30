@@ -255,40 +255,36 @@ applicationSchema.pre(
   "save",
   function (next) {
     if (!this.applicationId) {
-      // India timezone
-      const indiaTime =
-        new Date(
-          new Date().toLocaleString(
-            "en-US",
-            {
-              timeZone:
-                "Asia/Kolkata",
-            }
-          )
-        );
+      const now = new Date();
+
+      // Convert UTC to IST (+5:30)
+      const indiaTime = new Date(
+        now.getTime() +
+          5.5 * 60 * 60 * 1000
+      );
 
       const year =
-        indiaTime.getFullYear();
+        indiaTime.getUTCFullYear();
 
       const month = String(
-        indiaTime.getMonth() +
+        indiaTime.getUTCMonth() +
           1
       ).padStart(2, "0");
 
       const day = String(
-        indiaTime.getDate()
+        indiaTime.getUTCDate()
       ).padStart(2, "0");
 
       const hours = String(
-        indiaTime.getHours()
+        indiaTime.getUTCHours()
       ).padStart(2, "0");
 
       const minutes = String(
-        indiaTime.getMinutes()
+        indiaTime.getUTCMinutes()
       ).padStart(2, "0");
 
       const seconds = String(
-        indiaTime.getSeconds()
+        indiaTime.getUTCSeconds()
       ).padStart(2, "0");
 
       // YYYYMMDDHHMMSS
