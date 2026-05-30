@@ -65,58 +65,90 @@ exports.registerUser = async (req, res) => {
 
 // ===================== LOGIN =====================
 exports.loginUser = async (req, res) => {
-  try { 
-    const { emailId, mobileNumber, password } = req.body;
+  try {
+    const { 
+      emailId, 
+      mobileNumber, 
+      password,
+      fcmToken 
+    } = req.body;
 
     if ((!emailId && !mobileNumber) || !password) {
-      return res.status(400).json({ message: "Email or mobile number and password are required" });
+      return res.status(400).json({
+        message: "Email or mobile number and password are required",
+      });
     }
 
     const query = [];
     if (emailId) query.push({ emailId });
     if (mobileNumber) query.push({ mobileNumber });
 
-    const user = await User.findOne({ $or: query }); 
+    const user = await User.findOne({
+      $or: query,
+    });
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({
+        message: "Invalid credentials",
+      });
     }
 
-    // check password
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
 
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({
+        message: "Invalid credentials",
+      });
     }
 
-    // 🚫 dealer not approved
-    if (user.role === "dealer" && !user.isApproved) {
+    // save FCM token
+    if (fcmToken) {
+      user.fcmToken = fcmToken;
+      await user.save();
+    }
+
+    // dealer approval check
+    if (
+      user.role === "dealer" &&
+      !user.isApproved
+    ) {
       if (user.isRejected) {
         return res.status(403).json({
-          message: `Rejected by admin: ${user.rejectReason || "No reason"}`
+          message: `Rejected by admin: ${
+            user.rejectReason ||
+            "No reason"
+          }`,
         });
       }
 
       return res.status(403).json({
-        message: "Wait for admin approval"
+        message:
+          "Wait for admin approval",
       });
     }
 
-    // token
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      {
+        id: user._id,
+        role: user.role,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
     res.json({
-      message: "Login successful",
+      message:
+        "Login successful",
       token,
       user,
     });
-
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message: error.message,
+    });
   }
 };
 

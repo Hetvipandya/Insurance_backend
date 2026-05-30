@@ -526,89 +526,111 @@ exports.updateApplication = async (req, res) => {
     await application.save();
 
     // ================= SEND NOTIFICATION TO DEALER =================
-    try {
-      // Only send notification if status changed to approved or rejected
-      if (newStatus) {
-        const dealer =
-          await User.findById(
-            application.user
-          );
+  // ================= SEND NOTIFICATION TO DEALER =================
+try {
+  if (newStatus) {
+    const dealer = await User.findById(
+      application.user
+    );
+
+    if (
+      dealer &&
+      dealer.fcmToken
+    ) {
+      let title = "";
+      let body = "";
+
+      // Approved
+      if (
+        newStatus === "approved"
+      ) {
+        title =
+          "Insurance Approved ✅";
+
+        body = `Your application for vehicle ${application.carNo} has been approved`;
+      }
+
+      // Rejected
+      else if (
+        newStatus ===
+        "rejected"
+      ) {
+        title =
+          "Insurance Rejected ❌";
+
+        body = `Your application for vehicle ${application.carNo} has been rejected`;
 
         if (
-          dealer &&
-          dealer.fcmToken
+          application.rejectionReason
         ) {
-          let title = "";
-          let body = "";
-
-          // Approved
-          if (
-            newStatus ===
-            "approved"
-          ) {
-            title =
-              "Insurance Approved ✅";
-
-            body = `Your application for vehicle ${application.carNo} has been approved`;
-          }
-
-          // Rejected
-          else if (
-            newStatus ===
-            "rejected"
-          ) {
-            title =
-              "Insurance Rejected ❌";
-
-            body = `Your application for vehicle ${application.carNo} has been rejected`;
-
-            if (
-              application.rejectionReason
-            ) {
-              body += ` | Reason: ${application.rejectionReason}`;
-            }
-          }
-
-          // send push notification
-          await admin
-            .messaging()
-            .send({
-              token:
-                dealer.fcmToken,
-
-              notification: {
-                title,
-                body,
-              },
-
-              data: {
-                applicationId:
-                  application._id.toString(),
-
-                status:
-                  newStatus,
-                carNo:
-                  application.carNo,
-              },
-            });
-
-          console.log(
-            "✅ Dealer notification sent for status: " + newStatus
-          );
-        } else {
-          console.log(
-            "❌ Dealer FCM token not found"
-          );
+          body += ` | Reason: ${application.rejectionReason}`;
         }
       }
-    } catch (
-      notificationError
-    ) {
+
+      const message = {
+        token: dealer.fcmToken,
+
+        notification: {
+          title,
+          body,
+        },
+
+        android: {
+          priority: "high",
+          notification: {
+            sound: "default",
+            channelId:
+              "insurance_channel",
+          },
+        },
+
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+            },
+          },
+        },
+
+        data: {
+          click_action:
+            "FLUTTER_NOTIFICATION_CLICK",
+          type:
+            "application_status",
+          applicationId:
+            application._id.toString(),
+          status:
+            newStatus,
+          carNo:
+            application.carNo || "",
+          title,
+          body,
+        },
+      };
+
+      const response =
+        await admin
+          .messaging()
+          .send(message);
+
       console.log(
-        "Notification Error:",
-        notificationError
+        "✅ Dealer notification sent:",
+        response
+      );
+    } else {
+      console.log(
+        "❌ Dealer FCM token not found"
       );
     }
+  }
+} catch (
+  notificationError
+) {
+  console.log(
+    "Notification Error:",
+    notificationError
+  );
+}
 
     // ================= GET UPDATED DATA =================
     const updatedApplication =
