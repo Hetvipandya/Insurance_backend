@@ -264,7 +264,7 @@ const applicationSchema =
 
     this.applicationId = `${day}${month}${year}${hours}${minutes}${seconds}`;
   }
-
+  });
 module.exports =
   mongoose.model(
     "Application",
