@@ -255,40 +255,48 @@ applicationSchema.pre(
   "save",
   function (next) {
     if (!this.applicationId) {
-      const now = new Date();
+      // Get India time
+      const formatter =
+        new Intl.DateTimeFormat(
+          "en-IN",
+          {
+            timeZone:
+              "Asia/Kolkata",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
+          }
+        );
 
-      // Convert UTC to IST (+5:30)
-      const indiaTime = new Date(
-        now.getTime() +
-          5.5 * 60 * 60 * 1000
-      );
+      const parts =
+        formatter.formatToParts(
+          new Date()
+        );
+
+      const getPart = (type) =>
+        parts.find(
+          (p) => p.type === type
+        )?.value;
 
       const year =
-        indiaTime.getUTCFullYear();
-
-      const month = String(
-        indiaTime.getUTCMonth() +
-          1
-      ).padStart(2, "0");
-
-      const day = String(
-        indiaTime.getUTCDate()
-      ).padStart(2, "0");
-
-      const hours = String(
-        indiaTime.getUTCHours()
-      ).padStart(2, "0");
-
-      const minutes = String(
-        indiaTime.getUTCMinutes()
-      ).padStart(2, "0");
-
-      const seconds = String(
-        indiaTime.getUTCSeconds()
-      ).padStart(2, "0");
+        getPart("year");
+      const month =
+        getPart("month");
+      const day =
+        getPart("day");
+      const hour =
+        getPart("hour");
+      const minute =
+        getPart("minute");
+      const second =
+        getPart("second");
 
       // YYYYMMDDHHMMSS
-      this.applicationId = `${year}${month}${day}${hours}${minutes}${seconds}`;
+      this.applicationId = `${year}${month}${day}${hour}${minute}${second}`;
     }
 
     next();
