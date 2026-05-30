@@ -252,49 +252,41 @@ const applicationSchema =
 
 // ================= APPLICATION ID GENERATE =================
 // ================= APPLICATION ID GENERATE =================
+// ================= APPLICATION ID GENERATE =================
 applicationSchema.pre(
   "save",
   function (next) {
     if (!this.applicationId) {
       const now = new Date();
 
-      // IST date parts
-      const formatter =
-        new Intl.DateTimeFormat(
-          "en-GB",
-          {
-            timeZone:
-              "Asia/Kolkata",
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: false,
-          }
-        );
+      // Convert UTC to IST (+5:30)
+      const istDate = new Date(
+        now.getTime() +
+          5.5 * 60 * 60 * 1000
+      );
 
-      const parts =
-        formatter.formatToParts(
-          now
-        );
+      const year =
+        istDate.getUTCFullYear();
 
-      const get = (type) =>
-        parts.find(
-          (p) => p.type === type
-        )?.value;
+      const month = String(
+        istDate.getUTCMonth() + 1
+      ).padStart(2, "0");
 
-      const year = get("year");
-      const month =
-        get("month");
-      const day = get("day");
-      const hour =
-        get("hour");
-      const minute =
-        get("minute");
-      const second =
-        get("second");
+      const day = String(
+        istDate.getUTCDate()
+      ).padStart(2, "0");
+
+      const hour = String(
+        istDate.getUTCHours()
+      ).padStart(2, "0");
+
+      const minute = String(
+        istDate.getUTCMinutes()
+      ).padStart(2, "0");
+
+      const second = String(
+        istDate.getUTCSeconds()
+      ).padStart(2, "0");
 
       // YYYYMMDDHHMMSS
       this.applicationId = `${year}${month}${day}${hour}${minute}${second}`;
