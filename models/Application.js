@@ -113,34 +113,36 @@ const mongoose = require("mongoose");
 const generateApplicationId = () => {
   const now = new Date();
 
-  const day = String(
-    now.getDate()
-  ).padStart(2, "0");
+  // Convert to Indian timezone
+  const indiaTime = new Date(
+    now.toLocaleString("en-US", {
+      timeZone: "Asia/Kolkata",
+    })
+  );
+
+  const year = indiaTime.getFullYear();
 
   const month = String(
-    now.getMonth() + 1
+    indiaTime.getMonth() + 1
   ).padStart(2, "0");
 
-  const year =
-    now.getFullYear();
+  const day = String(
+    indiaTime.getDate()
+  ).padStart(2, "0");
 
   const hours = String(
-    now.getHours()
+    indiaTime.getHours()
   ).padStart(2, "0");
 
   const minutes = String(
-    now.getMinutes()
+    indiaTime.getMinutes()
   ).padStart(2, "0");
 
   const seconds = String(
-    now.getSeconds()
+    indiaTime.getSeconds()
   ).padStart(2, "0");
 
-  const milliseconds = String(
-    now.getMilliseconds()
-  ).padStart(3, "0");
-
-return `${year}${month}${day}${hours}${minutes}${seconds}`;
+  return `${year}${month}${day}${hours}${minutes}${seconds}`;
 };
 
 // ================= DOCUMENT SCHEMA =================
