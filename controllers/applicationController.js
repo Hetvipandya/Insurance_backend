@@ -183,6 +183,37 @@ exports.getMyApplications = async (req, res) => {
   }
 };
 
+exports.getApplicationStats = async (req, res) => {
+  try {
+    const stats = await Application.aggregate([
+      {
+        $group: {
+          _id: {
+            $ifNull: ["$status", "pending"]
+          },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    let result = {
+      total: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+    };
+
+    stats.forEach((s) => {
+      result.total += s.count;
+      result[s._id] = s.count;
+    });
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // ================= GET ALL FOR ADMIN =================
 exports.getAllApplicationsForAdmin = async (req, res) => {
   try {
