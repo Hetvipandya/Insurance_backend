@@ -140,7 +140,7 @@ const generateApplicationId = () => {
     now.getMilliseconds()
   ).padStart(3, "0");
 
-  return `${day}${month}${year}${hours}${minutes}${seconds}${milliseconds}`;
+return `${year}${month}${day}${hours}${minutes}${seconds}`;
 };
 
 // ================= DOCUMENT SCHEMA =================
