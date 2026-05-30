@@ -356,9 +356,18 @@ exports.updateApplication = async (req, res) => {
     }
 
     // ================= STATUS =================
+    let statusChanged = false;
+    let newStatus = null;
+
     if (req.body.status?.trim()) {
       const status =
         req.body.status.trim();
+
+      // Track if status is being changed to approved or rejected
+      if (status === "approved" || status === "rejected") {
+        statusChanged = true;
+        newStatus = status;
+      }
 
       application.status = status;
 
@@ -518,86 +527,79 @@ exports.updateApplication = async (req, res) => {
 
     // ================= SEND NOTIFICATION TO DEALER =================
     try {
-      // user fetch karo
-      const dealer =
-        await User.findById(
-          application.user
-        );
+      // Only send notification if status changed to approved or rejected
+      if (newStatus) {
+        const dealer =
+          await User.findById(
+            application.user
+          );
 
-      if (
-        dealer &&
-        dealer.fcmToken
-      ) {
-        let title = "";
-        let body = "";
-
-        // Approved
         if (
-          application.status ===
-          "approved"
+          dealer &&
+          dealer.fcmToken
         ) {
-          title =
-            "Insurance Approved";
+          let title = "";
+          let body = "";
 
-          body = `Your application for vehicle ${application.carNo} has been approved`;
-        }
-
-        // Rejected
-        else if (
-          application.status ===
-          "rejected"
-        ) {
-          title =
-            "Insurance Rejected";
-
-          body = `Your application for vehicle ${application.carNo} has been rejected`;
-
+          // Approved
           if (
-            application.rejectionReason
+            newStatus ===
+            "approved"
           ) {
-            body += ` Reason: ${application.rejectionReason}`;
+            title =
+              "Insurance Approved ✅";
+
+            body = `Your application for vehicle ${application.carNo} has been approved`;
           }
+
+          // Rejected
+          else if (
+            newStatus ===
+            "rejected"
+          ) {
+            title =
+              "Insurance Rejected ❌";
+
+            body = `Your application for vehicle ${application.carNo} has been rejected`;
+
+            if (
+              application.rejectionReason
+            ) {
+              body += ` | Reason: ${application.rejectionReason}`;
+            }
+          }
+
+          // send push notification
+          await admin
+            .messaging()
+            .send({
+              token:
+                dealer.fcmToken,
+
+              notification: {
+                title,
+                body,
+              },
+
+              data: {
+                applicationId:
+                  application._id.toString(),
+
+                status:
+                  newStatus,
+                carNo:
+                  application.carNo,
+              },
+            });
+
+          console.log(
+            "✅ Dealer notification sent for status: " + newStatus
+          );
+        } else {
+          console.log(
+            "❌ Dealer FCM token not found"
+          );
         }
-
-        // Pending
-        else if (
-          application.status ===
-          "pending"
-        ) {
-          title =
-            "Application Updated";
-
-          body = `Your application for vehicle ${application.carNo} is under review`;
-        }
-
-        // send push notification
-        await admin
-          .messaging()
-          .send({
-            token:
-              dealer.fcmToken,
-
-            notification: {
-              title,
-              body,
-            },
-
-            data: {
-              applicationId:
-                application._id.toString(),
-
-              status:
-                application.status,
-            },
-          });
-
-        console.log(
-          "✅ Dealer notification sent"
-        );
-      } else {
-        console.log(
-          "❌ Dealer FCM token not found"
-        );
       }
     } catch (
       notificationError
