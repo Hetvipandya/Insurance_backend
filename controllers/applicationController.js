@@ -188,9 +188,7 @@ exports.getApplicationStats = async (req, res) => {
     const stats = await Application.aggregate([
       {
         $group: {
-          _id: {
-            $ifNull: ["$status", "pending"]
-          },
+          _id: "$status",
           count: { $sum: 1 }
         }
       }
@@ -203,9 +201,13 @@ exports.getApplicationStats = async (req, res) => {
       rejected: 0,
     };
 
+    // Map each status count to result
     stats.forEach((s) => {
+      const status = s._id || "pending";
+      if (result.hasOwnProperty(status)) {
+        result[status] = s.count;
+      }
       result.total += s.count;
-      result[s._id] = s.count;
     });
 
     res.json(result);
