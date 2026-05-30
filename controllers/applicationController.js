@@ -1,196 +1,706 @@
-const mongoose = require("mongoose");
+const Application = require("../models/Application");
+const Executive = require("../models/Executive");
+const admin = require("../utils/firebaseAdmin");
+const User = require("../models/User");
 
-// ================= GENERATE APPLICATION ID =================
-const generateApplicationId = () => {
-  const now = new Date();
+// ================= CREATE =================
+exports.createApplication = async (req, res) => {
+  try {
+    const { carNo, tp, otherDetails, mobileNo } =
+      req.body;
 
-  const day = String(
-    now.getDate()
-  ).padStart(2, "0");
+    const userId = req.user?.id;
 
-  const month = String(
-    now.getMonth() + 1
-  ).padStart(2, "0");
+    // ================= AUTH CHECK =================
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
 
-  const year =
-    now.getFullYear();
+    // ================= ADMIN CHECK =================
+    if (
+      req.files?.adminPolicyDocument &&
+      req.user.role !== "admin"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Only admin can upload policy document",
+      });
+    }
 
-  const hours = String(
-    now.getHours()
-  ).padStart(2, "0");
+    // ================= VALIDATION =================
+    if (!carNo || !tp) {
+      return res.status(400).json({
+        success: false,
+        message: "carNo & tp are required",
+      });
+    }
 
-  const minutes = String(
-    now.getMinutes()
-  ).padStart(2, "0");
+    // ================= GET CLOUDINARY URLS =================
+    const getFileUrls = (fieldName) => {
+      return req.files?.[fieldName]?.map(
+        (file) => file.path // Cloudinary URL
+      ) || [];
+    };
 
-  const seconds = String(
-    now.getSeconds()
-  ).padStart(2, "0");
+    const rcBookImages =
+      getFileUrls("rcBookImages");
 
-  const milliseconds = String(
-    now.getMilliseconds()
-  ).padStart(3, "0");
+    const aadharCardImages =
+      getFileUrls("aadharCardImages");
 
-  return `${day}${month}${year}${hours}${minutes}${seconds}${milliseconds}`;
+    const panCardImages =
+      getFileUrls("panCardImages");
+
+    const oldPolicyImages =
+      getFileUrls("oldPolicyImages");
+
+    const otherImages =
+      getFileUrls("otherImages");
+
+    const adminPolicyDocument =
+      req.files?.adminPolicyDocument?.[0]
+        ?.path || null;
+
+    // ================= REQUIRED FILE CHECK =================
+    if (
+      rcBookImages.length === 0 ||
+      aadharCardImages.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "RC Book & Aadhar images are required",
+      });
+    }
+
+    // ================= CREATE APPLICATION =================
+    const app = await Application.create({
+      user: userId,
+      carNo,
+      tp,
+      mobileNo,
+      otherDetails,
+
+      rcBookImages,
+      aadharCardImages,
+      panCardImages,
+      oldPolicyImages,
+      otherImages,
+
+      adminPolicyDocument,
+
+      status: "pending",
+    });
+
+    // ================= SEND PUSH NOTIFICATION =================
+try {
+  // Find admin user
+  const adminUser = await User.findOne({
+    role: "admin",
+  });
+
+  // Check if admin has FCM token
+  if (
+    adminUser &&
+    adminUser.fcmToken
+  ) {
+    await admin.messaging().send({
+      token: adminUser.fcmToken,
+      notification: {
+        title:
+          "New Insurance Application",
+        body:
+          `Car No: ${carNo} submitted by ${req.user.fullName}`,
+      },
+    });
+
+    console.log(
+      "✅ Notification sent"
+    );
+  } else {
+    console.log(
+      "❌ Admin FCM token not found"
+    );
+  }
+} catch (notificationError) {
+  console.log(
+    "Notification Error:",
+    notificationError
+  );
+}
+
+    return res.status(201).json({
+      success: true,
+      message: "Application created successfully",
+      data: app,
+    });
+  } catch (err) {
+    console.error(
+      "Create Application Error:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server Error",
+    });
+  }
 };
 
-// ================= DOCUMENT SCHEMA =================
-const documentHistorySchema =
-  new mongoose.Schema(
-    {
-      urls: {
-        type: [String],
-        default: [],
-      },
+// ================= GET ALL (User wise) =================
+// ================= GET ALL (User wise + Admin) =================
 
-      uploadedAt: {
-        type: Date,
-        default: Date.now,
-      },
+exports.getMyApplications = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
 
-      uploadedAfterReject: {
-        type: Boolean,
-        default: false,
-      },
-    },
-    { _id: false }
-  );
+    let apps;
 
-const applicationSchema =
-  new mongoose.Schema(
-    {
-      // ✅ FIXED APPLICATION ID
-      applicationId: {
-        type: String,
-        unique: true,
-        default:
-          generateApplicationId,
-      },
+    // ✅ Admin → ALL applications
+    if (userRole === "admin") {
+      apps = await Application.find()
+  .populate("user", "fullName emailId mobileNumber")
+  .populate("executive", "Name emailId mobileNumber")
+  .sort({ createdAt: -1 });
+    } 
+    // ✅ Normal user → Only own applications
+    else {
+      apps = await Application.find({ user: userId })
+        .populate("user", "fullName emailId mobileNumber")
+        .sort({ createdAt: -1 });
+    }
 
-      user: {
-        type:
-          mongoose.Schema.Types
-            .ObjectId,
-        ref: "User",
-        required: true,
-      },
+    res.json(apps);
 
-      executive: {
-        type:
-          mongoose.Schema.Types
-            .ObjectId,
-        ref: "Executive",
-        default: null,
-      },
+  } catch (err) {
+    console.error("Error fetching applications:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
 
-      carNo: {
-        type: String,
-        required: true,
-        trim: true,
-      },
+// ================= GET ALL FOR ADMIN =================
+exports.getAllApplicationsForAdmin = async (req, res) => {
+  try {
+    console.log("Admin route called, user role:", req.user.role);
 
-      mobileNo: {
-        type: String,
-        required: true,
-        trim: true,
-      },
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Access denied" });
+    }
 
-      // ================= ORIGINAL DOCUMENTS =================
-      rcBookImages: {
-        type: [String],
-        required: true,
-      },
+    console.log("Fetching applications...");
+    const apps = await Application.find()
+      .populate("user", "fullName emailId mobileNumber")
+       .populate(
+          "executive",
+          "Name Email mobileNo"
+        ) 
+      .sort({ createdAt: -1 });
 
-      aadharCardImages: {
-        type: [String],
-        required: true,
-      },
+    console.log("Found applications:", apps.length);
+    res.json(apps);
+  } catch (err) {
+    console.error("Error fetching all applications for admin:", err);
+    res.status(500).json({ message: "Server Error", error: err.message });
+  }
+};
 
-      panCardImages: {
-        type: [String],
-        default: [],
-      },
+exports.assignExecutive = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { executiveId } = req.body;
 
-      oldPolicyImages: {
-        type: [String],
-        default: [],
-      },
-
-      otherImages: {
-        type: [String],
-        default: [],
-      },
-
-      // ================= NEW DOCUMENTS HISTORY =================
-      newDocuments: {
-        rcBookImages: {
-          type:
-            [documentHistorySchema],
-          default: [],
+    // ================= UPDATE APPLICATION =================
+    const updatedApplication =
+      await Application.findByIdAndUpdate(
+        id,
+        {
+          executive: executiveId,
         },
+        { new: true }
+      )
+  .populate("user", "fullName emailId mobileNumber")
+  .populate("executive", "Name emailId mobileNumber");
 
-        aadharCardImages: {
-          type:
-            [documentHistorySchema],
-          default: [],
-        },
+    if (!updatedApplication) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
 
-        panCardImages: {
-          type:
-            [documentHistorySchema],
-          default: [],
-        },
-
-        oldPolicyImages: {
-          type:
-            [documentHistorySchema],
-          default: [],
-        },
-
-        otherImages: {
-          type:
-            [documentHistorySchema],
-          default: [],
+    // ================= UPDATE EXECUTIVE =================
+    await Executive.findByIdAndUpdate(
+      executiveId,
+      {
+        $addToSet: {
+          assignedApplications: id,
         },
       },
+      { new: true }
+    );
 
-      adminPolicyDocument: {
-        type: String,
-        default: null,
-      },
+    res.status(200).json({
+      success: true,
+      message: "Executive Assigned Successfully",
+      data: updatedApplication,
+    });
 
-      status: {
-        type: String,
-        enum: [
-          "pending",
-          "approved",
-          "rejected",
-        ],
-        default: "pending",
-      },
+  } catch (error) {
+    console.log("ASSIGN EXECUTIVE ERROR:", error);
 
-      tp: {
-        type: String,
-        required: true,
-        default: "none",
-      },
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
-      rejectionReason: {
-        type: String,
-        default: "",
-        trim: true,
-      },
+exports.getApplicationByExecutive = async (req, res) => {
+  try {
+    const executiveId = req.params.id;
 
-      otherDetails: {
-        type: String,
-        trim: true,
-      },
-    },
-    { timestamps: true }
-  );
+    const apps = await Application.find({
+      executive: executiveId,
+    })
+      .populate("user", "fullName emailId mobileNumber")
+      .sort({ createdAt: -1 });
 
-module.exports =
-  mongoose.model(
-    "Application",
-    applicationSchema
-  );
+    res.json(apps);
+  } catch (err) {
+    console.error(
+      "Error fetching applications for executive:",
+      err
+    );
+
+    res.status(500).json({
+      message: "Server Error",
+      error: err.message,
+    });
+  }
+};
+
+
+// ================= GET SINGLE =================
+exports.getApplicationById = async (req, res) => {
+  try {
+const app = await Application.findById(req.params.id)
+  .populate("user", "fullName emailId mobileNumber")
+  .populate("executive", "Name emailId mobileNumber");
+
+    if (!app) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    res.json(app);
+  } catch (err) {
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// ================= UPDATE =================
+
+exports.updateApplication = async (req, res) => {
+  try {
+    req.body = req.body || {};
+
+    console.log("BODY:", req.body);
+    console.log("FILES:", req.files);
+
+    const application = await Application.findById(
+      req.params.id
+    );
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    // ================= STATUS =================
+    if (req.body.status?.trim()) {
+      const status =
+        req.body.status.trim();
+
+      application.status = status;
+
+      // ================= REJECT REASON =================
+      if (status === "rejected") {
+        application.rejectionReason =
+          req.body.rejectionReason
+            ? req.body.rejectionReason
+                .toString()
+                .trim()
+            : "";
+      }
+
+      if (status === "approved") {
+        application.rejectionReason =
+          "";
+      }
+    }
+
+    // ================= MOBILE NUMBER =================
+    if (req.body.mobileNo?.trim()) {
+      application.mobileNo =
+        req.body.mobileNo.trim();
+    }
+
+    // ================= EXECUTIVE ASSIGN =================
+    if (
+      req.body.executiveId?.trim()
+    ) {
+      application.executive =
+        req.body.executiveId.trim();
+
+      await Executive.findByIdAndUpdate(
+        req.body.executiveId,
+        {
+          $addToSet: {
+            assignedApplications:
+              application._id,
+          },
+        }
+      );
+    }
+
+    // ================= HANDLE DOCUMENT UPDATE =================
+    if (
+      req.files &&
+      Object.keys(req.files)
+        .length > 0
+    ) {
+      const addNewDocument = (
+        fieldName
+      ) => {
+        if (
+          req.files[fieldName] &&
+          req.files[fieldName]
+            .length > 0
+        ) {
+          const uploadedFiles =
+            req.files[
+              fieldName
+            ].map(
+              (file) =>
+                file.path
+            );
+
+          // ================= SAVE HISTORY =================
+          if (
+            !application
+              .newDocuments
+          ) {
+            application.newDocuments =
+              {};
+          }
+
+          if (
+            !application
+              .newDocuments[
+              fieldName
+            ]
+          ) {
+            application.newDocuments[
+              fieldName
+            ] = [];
+          }
+
+          application.newDocuments[
+            fieldName
+          ].push({
+            urls: uploadedFiles,
+            uploadedAt:
+              new Date(),
+
+            uploadedAfterReject:
+              application.status ===
+              "rejected",
+          });
+
+          // ================= IMPORTANT FIX =================
+          // OLD + NEW IMAGES MERGE
+          application[
+            fieldName
+          ] = [
+            ...(application[
+              fieldName
+            ] || []),
+            ...uploadedFiles,
+          ];
+        }
+      };
+
+      // ================= UPDATE DOCS =================
+      addNewDocument(
+        "rcBookImages"
+      );
+
+      addNewDocument(
+        "aadharCardImages"
+      );
+
+      addNewDocument(
+        "panCardImages"
+      );
+
+      addNewDocument(
+        "oldPolicyImages"
+      );
+
+      addNewDocument(
+        "otherImages"
+      );
+
+      // ================= POLICY DOCUMENT =================
+      if (
+        req.files
+          .adminPolicyDocument &&
+        req.files
+          .adminPolicyDocument
+          .length > 0
+      ) {
+        application.adminPolicyDocument =
+          req.files
+            .adminPolicyDocument[0]
+            .path;
+      }
+
+      // ================= RESET STATUS AFTER REUPLOAD =================
+      application.status =
+        "pending";
+
+      // clear reject reason after reupload
+      application.rejectionReason =
+        "";
+    }
+
+    // ================= SAVE =================
+    await application.save();
+
+    // ================= SEND NOTIFICATION TO DEALER =================
+    try {
+      // user fetch karo
+      const dealer =
+        await User.findById(
+          application.user
+        );
+
+      if (
+        dealer &&
+        dealer.fcmToken
+      ) {
+        let title = "";
+        let body = "";
+
+        // Approved
+        if (
+          application.status ===
+          "approved"
+        ) {
+          title =
+            "Insurance Approved";
+
+          body = `Your application for vehicle ${application.carNo} has been approved`;
+        }
+
+        // Rejected
+        else if (
+          application.status ===
+          "rejected"
+        ) {
+          title =
+            "Insurance Rejected";
+
+          body = `Your application for vehicle ${application.carNo} has been rejected`;
+
+          if (
+            application.rejectionReason
+          ) {
+            body += ` Reason: ${application.rejectionReason}`;
+          }
+        }
+
+        // Pending
+        else if (
+          application.status ===
+          "pending"
+        ) {
+          title =
+            "Application Updated";
+
+          body = `Your application for vehicle ${application.carNo} is under review`;
+        }
+
+        // send push notification
+        await admin
+          .messaging()
+          .send({
+            token:
+              dealer.fcmToken,
+
+            notification: {
+              title,
+              body,
+            },
+
+            data: {
+              applicationId:
+                application._id.toString(),
+
+              status:
+                application.status,
+            },
+          });
+
+        console.log(
+          "✅ Dealer notification sent"
+        );
+      } else {
+        console.log(
+          "❌ Dealer FCM token not found"
+        );
+      }
+    } catch (
+      notificationError
+    ) {
+      console.log(
+        "Notification Error:",
+        notificationError
+      );
+    }
+
+    // ================= GET UPDATED DATA =================
+    const updatedApplication =
+      await Application.findById(
+        application._id
+      )
+        .populate(
+          "user",
+          "fullName emailId mobileNumber"
+        )
+        .populate(
+          "executive",
+          "Name emailId mobileNumber"
+        );
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "Application updated successfully",
+      data: updatedApplication,
+    });
+  } catch (error) {
+    console.log(
+      "UPDATE APPLICATION ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        error.message ||
+        "Server Error",
+    });
+  }
+};
+
+// exports.updateApplication = async (req, res) => {
+//   try {
+//     console.log("BODY:", req.body);
+//     console.log("FILES:", req.files);
+
+//     const application = await Application.findById(req.params.id);
+
+//     if (!application) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Application not found",
+//       });
+//     }
+
+//     // ================= STATUS UPDATE =================
+//     if (req.body.status !== undefined) {
+//       application.status = req.body.status;
+//     }
+
+//     // ================= MOBILE NUMBER UPDATE =================
+//     if (
+//       req.body.mobileNo !== undefined &&
+//       req.body.mobileNo.trim() !== ""
+//     ) {
+//       application.mobileNo = req.body.mobileNo;
+//     }
+
+//     // ================= EXECUTIVE ASSIGN =================
+//     if (req.body.executiveId) {
+//       application.executive = req.body.executiveId;
+
+//       await Executive.findByIdAndUpdate(
+//         req.body.executiveId,
+//         {
+//           $addToSet: {
+//             assignedApplications: application._id,
+//           },
+//         },
+//         { new: true }
+//       );
+//     }
+
+//     // ================= POLICY DOCUMENT =================
+//     if (
+//       req.files &&
+//       req.files.adminPolicyDocument &&
+//       req.files.adminPolicyDocument.length > 0
+//     ) {
+//       const file = req.files.adminPolicyDocument[0];
+
+//       application.adminPolicyDocument =
+//         `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
+//     }
+
+//     // ================= SAVE =================
+//     await application.save();
+
+//     // ================= UPDATED DATA =================
+//     const updatedApplication = await Application.findById(
+//       application._id
+//     )
+//       .populate("user", "fullName emailId mobileNumber")
+//       .populate("executive", "Name emailId mobileNumber");
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Application updated successfully",
+//       data: updatedApplication,
+//     });
+
+//   } catch (error) {
+//     console.log("UPDATE APPLICATION ERROR:", error);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message || "Server Error",
+//     });
+//   }
+// };
+
+// ================= DELETE =================
+exports.deleteApplication = async (req, res) => {
+  try {
+    const app = await Application.findByIdAndDelete(req.params.id);
+
+    if (!app) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    res.json({ message: "Application deleted" });
+  } catch (err) {
+    res.status(500).json({ message: "Server Error" });
+  }
+};

@@ -109,6 +109,40 @@
 
 const mongoose = require("mongoose");
 
+// ================= GENERATE APPLICATION ID =================
+const generateApplicationId = () => {
+  const now = new Date();
+
+  const day = String(
+    now.getDate()
+  ).padStart(2, "0");
+
+  const month = String(
+    now.getMonth() + 1
+  ).padStart(2, "0");
+
+  const year =
+    now.getFullYear();
+
+  const hours = String(
+    now.getHours()
+  ).padStart(2, "0");
+
+  const minutes = String(
+    now.getMinutes()
+  ).padStart(2, "0");
+
+  const seconds = String(
+    now.getSeconds()
+  ).padStart(2, "0");
+
+  const milliseconds = String(
+    now.getMilliseconds()
+  ).padStart(3, "0");
+
+  return `${day}${month}${year}${hours}${minutes}${seconds}${milliseconds}`;
+};
+
 // ================= DOCUMENT SCHEMA =================
 const documentHistorySchema =
   new mongoose.Schema(
@@ -134,19 +168,26 @@ const documentHistorySchema =
 const applicationSchema =
   new mongoose.Schema(
     {
+      // ✅ FIXED APPLICATION ID
       applicationId: {
         type: String,
         unique: true,
+        default:
+          generateApplicationId,
       },
 
       user: {
-        type: mongoose.Schema.Types.ObjectId,
+        type:
+          mongoose.Schema.Types
+            .ObjectId,
         ref: "User",
         required: true,
       },
 
       executive: {
-        type: mongoose.Schema.Types.ObjectId,
+        type:
+          mongoose.Schema.Types
+            .ObjectId,
         ref: "Executive",
         default: null,
       },
@@ -192,27 +233,32 @@ const applicationSchema =
       // ================= NEW DOCUMENTS HISTORY =================
       newDocuments: {
         rcBookImages: {
-          type: [documentHistorySchema],
+          type:
+            [documentHistorySchema],
           default: [],
         },
 
         aadharCardImages: {
-          type: [documentHistorySchema],
+          type:
+            [documentHistorySchema],
           default: [],
         },
 
         panCardImages: {
-          type: [documentHistorySchema],
+          type:
+            [documentHistorySchema],
           default: [],
         },
 
         oldPolicyImages: {
-          type: [documentHistorySchema],
+          type:
+            [documentHistorySchema],
           default: [],
         },
 
         otherImages: {
-          type: [documentHistorySchema],
+          type:
+            [documentHistorySchema],
           default: [],
         },
       },
@@ -252,19 +298,6 @@ const applicationSchema =
     { timestamps: true }
   );
 
-  applicationSchema.pre("save", function () {
-  if (!this.applicationId) {
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, "0");
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const year = now.getFullYear();
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    const seconds = String(now.getSeconds()).padStart(2, "0");
-
-    this.applicationId = `${day}${month}${year}${hours}${minutes}${seconds}`;
-  }
-  });
 module.exports =
   mongoose.model(
     "Application",
