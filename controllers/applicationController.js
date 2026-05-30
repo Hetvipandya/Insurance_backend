@@ -323,26 +323,26 @@ exports.updateApplication = async (req, res) => {
     }
 
     // ================= STATUS =================
- if (req.body.status?.trim()) {
-  const status = req.body.status.trim();
+    if (req.body.status?.trim()) {
+      const status =
+        req.body.status.trim();
 
-  application.status = status;
-
+      application.status = status;
 
       // ================= REJECT REASON =================
       if (status === "rejected") {
-    application.rejectionReason =
-      req.body.rejectionReason
-        ? req.body.rejectionReason
-            .toString()
-            .trim()
-        : "";
-  }
+        application.rejectionReason =
+          req.body.rejectionReason
+            ? req.body.rejectionReason
+                .toString()
+                .trim()
+            : "";
+      }
 
-  if (status === "approved") {
-    application.rejectionReason = "";
-  }
-
+      if (status === "approved") {
+        application.rejectionReason =
+          "";
+      }
     }
 
     // ================= MOBILE NUMBER =================
@@ -352,7 +352,9 @@ exports.updateApplication = async (req, res) => {
     }
 
     // ================= EXECUTIVE ASSIGN =================
-    if (req.body.executiveId?.trim()) {
+    if (
+      req.body.executiveId?.trim()
+    ) {
       application.executive =
         req.body.executiveId.trim();
 
@@ -367,236 +369,211 @@ exports.updateApplication = async (req, res) => {
       );
     }
 
-    // ================= IMAGE UPDATE FUNCTION =================
-    const updateImages = (fieldName) => {
-      if (
-        req.files &&
-        req.files[fieldName] &&
-        req.files[fieldName].length > 0
-      ) {
-        return req.files[fieldName].map(
-          (file) => file.path
-        );
-      }
-
-      return application[fieldName] || [];
-    };
-
-    // ================= UPDATE IMAGES =================
     // ================= HANDLE DOCUMENT UPDATE =================
-if (
-  req.files &&
-  Object.keys(req.files).length > 0
-) {
-  const addNewDocument = (
-    fieldName
-  ) => {
     if (
-      req.files[fieldName] &&
-      req.files[fieldName]
+      req.files &&
+      Object.keys(req.files)
         .length > 0
     ) {
-      const uploadedFiles =
-        req.files[
-          fieldName
-        ].map(
-          (file) => file.path
-        );
-
-      // save history
-      application.newDocuments[
+      const addNewDocument = (
         fieldName
-      ].push({
-        urls: uploadedFiles,
-        uploadedAt:
-          new Date(),
+      ) => {
+        if (
+          req.files[fieldName] &&
+          req.files[fieldName]
+            .length > 0
+        ) {
+          const uploadedFiles =
+            req.files[
+              fieldName
+            ].map(
+              (file) =>
+                file.path
+            );
 
-        uploadedAfterReject:
-          application.status ===
-          "rejected",
-      });
+          // ================= SAVE HISTORY =================
+          if (
+            !application
+              .newDocuments
+          ) {
+            application.newDocuments =
+              {};
+          }
 
-      // IMPORTANT:
-      // replace current images
-      application[
-        fieldName
-      ] = uploadedFiles;
+          if (
+            !application
+              .newDocuments[
+              fieldName
+            ]
+          ) {
+            application.newDocuments[
+              fieldName
+            ] = [];
+          }
+
+          application.newDocuments[
+            fieldName
+          ].push({
+            urls: uploadedFiles,
+            uploadedAt:
+              new Date(),
+
+            uploadedAfterReject:
+              application.status ===
+              "rejected",
+          });
+
+          // ================= IMPORTANT FIX =================
+          // OLD + NEW IMAGES MERGE
+          application[
+            fieldName
+          ] = [
+            ...(application[
+              fieldName
+            ] || []),
+            ...uploadedFiles,
+          ];
+        }
+      };
+
+      // ================= UPDATE DOCS =================
+      addNewDocument(
+        "rcBookImages"
+      );
+
+      addNewDocument(
+        "aadharCardImages"
+      );
+
+      addNewDocument(
+        "panCardImages"
+      );
+
+      addNewDocument(
+        "oldPolicyImages"
+      );
+
+      addNewDocument(
+        "otherImages"
+      );
+
+      // ================= POLICY DOCUMENT =================
+      if (
+        req.files
+          .adminPolicyDocument &&
+        req.files
+          .adminPolicyDocument
+          .length > 0
+      ) {
+        application.adminPolicyDocument =
+          req.files
+            .adminPolicyDocument[0]
+            .path;
+      }
+
+      // ================= RESET STATUS AFTER REUPLOAD =================
+      application.status =
+        "pending";
+
+      // clear reject reason after reupload
+      application.rejectionReason =
+        "";
     }
-  };
-
-  // update docs
-  addNewDocument(
-    "rcBookImages"
-  );
-
-  addNewDocument(
-    "aadharCardImages"
-  );
-
-  addNewDocument(
-    "panCardImages"
-  );
-
-  addNewDocument(
-    "oldPolicyImages"
-  );
-
-  addNewDocument(
-    "otherImages"
-  );
-
-  // ================= POLICY DOCUMENT =================
-  if (
-    req.files
-      .adminPolicyDocument &&
-    req.files
-      .adminPolicyDocument
-      .length > 0
-  ) {
-    application.adminPolicyDocument =
-      req.files
-        .adminPolicyDocument[0]
-        .path;
-  }
-
-  // if rejected and dealer uploads again
-  // reset status
-  application.status =
-    "pending";
-
-  application.rejectionReason =
-    "";
-}
-    // if (
-    //   req.files &&
-    //   Object.keys(req.files).length > 0
-    // ) {
-    //   application.rcBookImages =
-    //     updateImages("rcBookImages");
-
-    //   application.aadharCardImages =
-    //     updateImages("aadharCardImages");
-
-    //   application.panCardImages =
-    //     updateImages("panCardImages");
-
-    //   application.oldPolicyImages =
-    //     updateImages("oldPolicyImages");
-
-    //   application.otherImages =
-    //     updateImages("otherImages");
-
-    //   // ================= POLICY DOCUMENT =================
-    //   if (
-    //     req.files.adminPolicyDocument &&
-    //     req.files.adminPolicyDocument.length >
-    //       0
-    //   ) {
-    //     application.adminPolicyDocument =
-    //       req.files.adminPolicyDocument[0]
-    //         .path;
-    //   }
-
-    //   // ================= RESET STATUS AFTER REUPLOAD =================
-    //   application.status = "pending";
-
-    //   // clear reject reason after reupload
-    //   application.rejectionReason = "";
-    // }
 
     // ================= SAVE =================
     await application.save();
+
     // ================= SEND NOTIFICATION TO DEALER =================
-try {
-  // user fetch karo
-  const dealer =
-    await User.findById(
-      application.user
-    );
-
-  if (
-    dealer &&
-    dealer.fcmToken
-  ) {
-    let title = "";
-    let body = "";
-
-    // Approved
-    if (
-      application.status ===
-      "approved"
-    ) {
-      title =
-        "Insurance Approved";
-
-      body = `Your application for vehicle ${application.carNo} has been approved`;
-    }
-
-    // Rejected
-    else if (
-      application.status ===
-      "rejected"
-    ) {
-      title =
-        "Insurance Rejected";
-
-      body = `Your application for vehicle ${application.carNo} has been rejected`;
+    try {
+      // user fetch karo
+      const dealer =
+        await User.findById(
+          application.user
+        );
 
       if (
-        application.rejectionReason
+        dealer &&
+        dealer.fcmToken
       ) {
-        body += ` Reason: ${application.rejectionReason}`;
+        let title = "";
+        let body = "";
+
+        // Approved
+        if (
+          application.status ===
+          "approved"
+        ) {
+          title =
+            "Insurance Approved";
+
+          body = `Your application for vehicle ${application.carNo} has been approved`;
+        }
+
+        // Rejected
+        else if (
+          application.status ===
+          "rejected"
+        ) {
+          title =
+            "Insurance Rejected";
+
+          body = `Your application for vehicle ${application.carNo} has been rejected`;
+
+          if (
+            application.rejectionReason
+          ) {
+            body += ` Reason: ${application.rejectionReason}`;
+          }
+        }
+
+        // Pending
+        else if (
+          application.status ===
+          "pending"
+        ) {
+          title =
+            "Application Updated";
+
+          body = `Your application for vehicle ${application.carNo} is under review`;
+        }
+
+        // send push notification
+        await admin
+          .messaging()
+          .send({
+            token:
+              dealer.fcmToken,
+
+            notification: {
+              title,
+              body,
+            },
+
+            data: {
+              applicationId:
+                application._id.toString(),
+
+              status:
+                application.status,
+            },
+          });
+
+        console.log(
+          "✅ Dealer notification sent"
+        );
+      } else {
+        console.log(
+          "❌ Dealer FCM token not found"
+        );
       }
-    }
-
-    // Pending
-    else if (
-      application.status ===
-      "pending"
+    } catch (
+      notificationError
     ) {
-      title =
-        "Application Updated";
-
-      body = `Your application for vehicle ${application.carNo} is under review`;
+      console.log(
+        "Notification Error:",
+        notificationError
+      );
     }
-
-    // send push notification
-    await admin
-      .messaging()
-      .send({
-        token:
-          dealer.fcmToken,
-
-        notification: {
-          title,
-          body,
-        },
-
-        data: {
-          applicationId:
-            application._id.toString(),
-
-          status:
-            application.status,
-        },
-      });
-
-    console.log(
-      "✅ Dealer notification sent"
-    );
-  } else {
-    console.log(
-      "❌ Dealer FCM token not found"
-    );
-  }
-} catch (
-  notificationError
-) {
-  console.log(
-    "Notification Error:",
-    notificationError
-  );
-}
 
     // ================= GET UPDATED DATA =================
     const updatedApplication =
@@ -618,8 +595,7 @@ try {
         "Application updated successfully",
       data: updatedApplication,
     });
-  }
-   catch (error) {
+  } catch (error) {
     console.log(
       "UPDATE APPLICATION ERROR:",
       error
@@ -628,7 +604,8 @@ try {
     return res.status(500).json({
       success: false,
       message:
-        error.message || "Server Error",
+        error.message ||
+        "Server Error",
     });
   }
 };
