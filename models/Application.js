@@ -163,7 +163,6 @@ const applicationSchema =
         trim: true,
       },
 
-      // ================= ORIGINAL DOCUMENTS =================
       rcBookImages: {
         type: [String],
         required: true,
@@ -189,7 +188,6 @@ const applicationSchema =
         default: [],
       },
 
-      // ================= NEW DOCUMENTS HISTORY =================
       newDocuments: {
         rcBookImages: {
           type: [documentHistorySchema],
@@ -252,19 +250,55 @@ const applicationSchema =
     { timestamps: true }
   );
 
-  applicationSchema.pre("save", function () {
-  if (!this.applicationId) {
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, "0");
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const year = now.getFullYear();
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    const seconds = String(now.getSeconds()).padStart(2, "0");
+// ================= APPLICATION ID GENERATE =================
+applicationSchema.pre(
+  "save",
+  function (next) {
+    if (!this.applicationId) {
+      // India timezone
+      const indiaTime =
+        new Date(
+          new Date().toLocaleString(
+            "en-US",
+            {
+              timeZone:
+                "Asia/Kolkata",
+            }
+          )
+        );
 
-    this.applicationId = `${day}${month}${year}${hours}${minutes}${seconds}`;
+      const year =
+        indiaTime.getFullYear();
+
+      const month = String(
+        indiaTime.getMonth() +
+          1
+      ).padStart(2, "0");
+
+      const day = String(
+        indiaTime.getDate()
+      ).padStart(2, "0");
+
+      const hours = String(
+        indiaTime.getHours()
+      ).padStart(2, "0");
+
+      const minutes = String(
+        indiaTime.getMinutes()
+      ).padStart(2, "0");
+
+      const seconds = String(
+        indiaTime.getSeconds()
+      ).padStart(2, "0");
+
+      // YYYYMMDDHHMMSS
+      this.applicationId = `${year}${month}${day}${hours}${minutes}${seconds}`;
+    }
+
+    next();
   }
-  });
+);
+
 module.exports =
   mongoose.model(
     "Application",
