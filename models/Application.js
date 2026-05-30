@@ -251,49 +251,42 @@ const applicationSchema =
   );
 
 // ================= APPLICATION ID GENERATE =================
+// ================= APPLICATION ID GENERATE =================
 applicationSchema.pre(
   "save",
   function (next) {
     if (!this.applicationId) {
-      // Get India time
-      const formatter =
-        new Intl.DateTimeFormat(
-          "en-IN",
-          {
-            timeZone:
-              "Asia/Kolkata",
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: false,
-          }
-        );
+      // Convert to India Time (IST)
+      const now = new Date();
 
-      const parts =
-        formatter.formatToParts(
-          new Date()
-        );
-
-      const getPart = (type) =>
-        parts.find(
-          (p) => p.type === type
-        )?.value;
+      const indiaTime = new Date(
+        now.toLocaleString("en-US", {
+          timeZone: "Asia/Kolkata",
+        })
+      );
 
       const year =
-        getPart("year");
-      const month =
-        getPart("month");
-      const day =
-        getPart("day");
-      const hour =
-        getPart("hour");
-      const minute =
-        getPart("minute");
-      const second =
-        getPart("second");
+        indiaTime.getFullYear();
+
+      const month = String(
+        indiaTime.getMonth() + 1
+      ).padStart(2, "0");
+
+      const day = String(
+        indiaTime.getDate()
+      ).padStart(2, "0");
+
+      const hour = String(
+        indiaTime.getHours()
+      ).padStart(2, "0");
+
+      const minute = String(
+        indiaTime.getMinutes()
+      ).padStart(2, "0");
+
+      const second = String(
+        indiaTime.getSeconds()
+      ).padStart(2, "0");
 
       // YYYYMMDDHHMMSS
       this.applicationId = `${year}${month}${day}${hour}${minute}${second}`;
