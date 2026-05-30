@@ -383,42 +383,117 @@ exports.updateApplication = async (req, res) => {
     };
 
     // ================= UPDATE IMAGES =================
+    // ================= STORE NEW DOCUMENTS =================
+if (
+  req.files &&
+  Object.keys(req.files).length > 0
+) {
+  const addNewDocument = (
+    fieldName
+  ) => {
     if (
-      req.files &&
-      Object.keys(req.files).length > 0
+      req.files[fieldName] &&
+      req.files[fieldName]
+        .length > 0
     ) {
-      application.rcBookImages =
-        updateImages("rcBookImages");
+      const uploadedFiles =
+        req.files[
+          fieldName
+        ].map(
+          (file) => file.path
+        );
 
-      application.aadharCardImages =
-        updateImages("aadharCardImages");
+      application.newDocuments[
+        fieldName
+      ].push({
+        urls: uploadedFiles,
+        uploadedAt:
+          new Date(),
 
-      application.panCardImages =
-        updateImages("panCardImages");
-
-      application.oldPolicyImages =
-        updateImages("oldPolicyImages");
-
-      application.otherImages =
-        updateImages("otherImages");
-
-      // ================= POLICY DOCUMENT =================
-      if (
-        req.files.adminPolicyDocument &&
-        req.files.adminPolicyDocument.length >
-          0
-      ) {
-        application.adminPolicyDocument =
-          req.files.adminPolicyDocument[0]
-            .path;
-      }
-
-      // ================= RESET STATUS AFTER REUPLOAD =================
-      application.status = "pending";
-
-      // clear reject reason after reupload
-      application.rejectionReason = "";
+        uploadedAfterReject:
+          application.status ===
+          "rejected",
+      });
     }
+  };
+
+  addNewDocument(
+    "rcBookImages"
+  );
+
+  addNewDocument(
+    "aadharCardImages"
+  );
+
+  addNewDocument(
+    "panCardImages"
+  );
+
+  addNewDocument(
+    "oldPolicyImages"
+  );
+
+  addNewDocument(
+    "otherImages"
+  );
+
+  // admin policy document
+  if (
+    req.files
+      .adminPolicyDocument &&
+    req.files
+      .adminPolicyDocument
+      .length > 0
+  ) {
+    application.adminPolicyDocument =
+      req.files
+        .adminPolicyDocument[0]
+        .path;
+  }
+
+  // reset status
+  application.status =
+    "pending";
+
+  application.rejectionReason =
+    "";
+}
+    // if (
+    //   req.files &&
+    //   Object.keys(req.files).length > 0
+    // ) {
+    //   application.rcBookImages =
+    //     updateImages("rcBookImages");
+
+    //   application.aadharCardImages =
+    //     updateImages("aadharCardImages");
+
+    //   application.panCardImages =
+    //     updateImages("panCardImages");
+
+    //   application.oldPolicyImages =
+    //     updateImages("oldPolicyImages");
+
+    //   application.otherImages =
+    //     updateImages("otherImages");
+
+    //   // ================= POLICY DOCUMENT =================
+    //   if (
+    //     req.files.adminPolicyDocument &&
+    //     req.files.adminPolicyDocument.length >
+    //       0
+    //   ) {
+    //     application.adminPolicyDocument =
+    //       req.files.adminPolicyDocument[0]
+    //         .path;
+    //   }
+
+    //   // ================= RESET STATUS AFTER REUPLOAD =================
+    //   application.status = "pending";
+
+    //   // clear reject reason after reupload
+    //   application.rejectionReason = "";
+    // }
 
     // ================= SAVE =================
     await application.save();

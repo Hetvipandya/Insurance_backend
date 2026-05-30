@@ -1,108 +1,259 @@
+// const mongoose = require("mongoose");
+
+// const applicationSchema = new mongoose.Schema(
+//   { 
+//     applicationId: {
+//       type: String,
+//       unique: true,
+//     },
+
+//     user: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: "User",
+//       required: true,
+//     },
+
+//     executive: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: "Executive",
+//       default: null,
+//     },
+
+//     carNo: {
+//       type: String,
+//       required: true,
+//       trim: true,
+//     },
+
+//     mobileNo: {
+//       type: String,
+//       required: true,
+//       trim: true,
+//     },
+
+//     rcBookImages: {
+//       type: [String],
+//       required: true,
+//       validate: [(val) => val.length > 0, "RC Book images required"],
+//     },
+
+//     aadharCardImages: {
+//       type: [String],
+//       required: true,
+//       validate: [(val) => val.length > 0, "Aadhar images required"],
+//     },
+
+//     panCardImages: {
+//       type: [String],
+//       default: [],
+//     },
+
+//     oldPolicyImages: {
+//       type: [String],
+//       default: [],
+//     },
+
+//     adminPolicyDocument: {
+//       type: String,
+//       default: null,
+//     },
+
+//     status: {
+//       type: String,
+//       enum: ["pending", "approved", "rejected"],
+//       default: "pending",
+//     },
+
+//     tp: {
+//       type: String,
+//       required: true,
+//       default: "none",
+//     },
+
+//       rejectionReason: {
+//       type: String,
+//       default: "",
+//       trim: true,
+//     },
+
+//     otherImages: {
+//       type: [String],
+//       default: [],
+//     },
+
+//     otherDetails: {
+//       type: String,
+//       trim: true,
+//     },
+//   },
+//   { timestamps: true }
+// );
+
+// // Generate applicationId before saving (format: DDMMYYYYHHMMSS)
+// applicationSchema.pre("save", function () {
+//   if (!this.applicationId) {
+//     const now = new Date();
+//     const day = String(now.getDate()).padStart(2, "0");
+//     const month = String(now.getMonth() + 1).padStart(2, "0");
+//     const year = now.getFullYear();
+//     const hours = String(now.getHours()).padStart(2, "0");
+//     const minutes = String(now.getMinutes()).padStart(2, "0");
+//     const seconds = String(now.getSeconds()).padStart(2, "0");
+
+//     this.applicationId = `${day}${month}${year}${hours}${minutes}${seconds}`;
+//   }
+
+// });
+
+// module.exports = mongoose.model("Application", applicationSchema);
+
 const mongoose = require("mongoose");
 
-const applicationSchema = new mongoose.Schema(
-  { 
-    applicationId: {
-      type: String,
-      unique: true,
-    },
+// ================= DOCUMENT SCHEMA =================
+const documentHistorySchema =
+  new mongoose.Schema(
+    {
+      urls: {
+        type: [String],
+        default: [],
+      },
 
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+      uploadedAt: {
+        type: Date,
+        default: Date.now,
+      },
 
-    executive: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Executive",
-      default: null,
+      uploadedAfterReject: {
+        type: Boolean,
+        default: false,
+      },
     },
+    { _id: false }
+  );
 
-    carNo: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+const applicationSchema =
+  new mongoose.Schema(
+    {
+      applicationId: {
+        type: String,
+        unique: true,
+      },
 
-    mobileNo: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
 
-    rcBookImages: {
-      type: [String],
-      required: true,
-      validate: [(val) => val.length > 0, "RC Book images required"],
-    },
+      executive: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Executive",
+        default: null,
+      },
 
-    aadharCardImages: {
-      type: [String],
-      required: true,
-      validate: [(val) => val.length > 0, "Aadhar images required"],
-    },
+      carNo: {
+        type: String,
+        required: true,
+        trim: true,
+      },
 
-    panCardImages: {
-      type: [String],
-      default: [],
-    },
+      mobileNo: {
+        type: String,
+        required: true,
+        trim: true,
+      },
 
-    oldPolicyImages: {
-      type: [String],
-      default: [],
-    },
+      // ================= ORIGINAL DOCUMENTS =================
+      rcBookImages: {
+        type: [String],
+        required: true,
+      },
 
-    adminPolicyDocument: {
-      type: String,
-      default: null,
-    },
+      aadharCardImages: {
+        type: [String],
+        required: true,
+      },
 
-    status: {
-      type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
-    },
+      panCardImages: {
+        type: [String],
+        default: [],
+      },
 
-    tp: {
-      type: String,
-      required: true,
-      default: "none",
-    },
+      oldPolicyImages: {
+        type: [String],
+        default: [],
+      },
+
+      otherImages: {
+        type: [String],
+        default: [],
+      },
+
+      // ================= NEW DOCUMENTS HISTORY =================
+      newDocuments: {
+        rcBookImages: {
+          type: [documentHistorySchema],
+          default: [],
+        },
+
+        aadharCardImages: {
+          type: [documentHistorySchema],
+          default: [],
+        },
+
+        panCardImages: {
+          type: [documentHistorySchema],
+          default: [],
+        },
+
+        oldPolicyImages: {
+          type: [documentHistorySchema],
+          default: [],
+        },
+
+        otherImages: {
+          type: [documentHistorySchema],
+          default: [],
+        },
+      },
+
+      adminPolicyDocument: {
+        type: String,
+        default: null,
+      },
+
+      status: {
+        type: String,
+        enum: [
+          "pending",
+          "approved",
+          "rejected",
+        ],
+        default: "pending",
+      },
+
+      tp: {
+        type: String,
+        required: true,
+        default: "none",
+      },
 
       rejectionReason: {
-      type: String,
-      default: "",
-      trim: true,
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      otherDetails: {
+        type: String,
+        trim: true,
+      },
     },
+    { timestamps: true }
+  );
 
-    otherImages: {
-      type: [String],
-      default: [],
-    },
-
-    otherDetails: {
-      type: String,
-      trim: true,
-    },
-  },
-  { timestamps: true }
-);
-
-// Generate applicationId before saving (format: DDMMYYYYHHMMSS)
-applicationSchema.pre("save", function () {
-  if (!this.applicationId) {
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, "0");
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const year = now.getFullYear();
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    const seconds = String(now.getSeconds()).padStart(2, "0");
-
-    this.applicationId = `${day}${month}${year}${hours}${minutes}${seconds}`;
-  }
-
-});
-
-module.exports = mongoose.model("Application", applicationSchema);
+module.exports =
+  mongoose.model(
+    "Application",
+    applicationSchema
+  );
