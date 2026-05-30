@@ -66,22 +66,36 @@ exports.registerUser = async (req, res) => {
 // ===================== LOGIN =====================
 exports.loginUser = async (req, res) => {
   try {
-    const { 
-      emailId, 
-      mobileNumber, 
+    const {
+      emailId,
+      mobileNumber,
       password,
-      fcmToken 
+      fcmToken,
     } = req.body;
 
-    if ((!emailId && !mobileNumber) || !password) {
+    // DEBUG
+    console.log("REQ BODY:", req.body);
+    console.log("FCM TOKEN RECEIVED:", fcmToken);
+
+    if (
+      (!emailId && !mobileNumber) ||
+      !password
+    ) {
       return res.status(400).json({
-        message: "Email or mobile number and password are required",
+        message:
+          "Email or mobile number and password are required",
       });
     }
 
     const query = [];
-    if (emailId) query.push({ emailId });
-    if (mobileNumber) query.push({ mobileNumber });
+
+    if (emailId)
+      query.push({ emailId });
+
+    if (mobileNumber)
+      query.push({
+        mobileNumber,
+      });
 
     const user = await User.findOne({
       $or: query,
@@ -89,28 +103,45 @@ exports.loginUser = async (req, res) => {
 
     if (!user) {
       return res.status(400).json({
-        message: "Invalid credentials",
+        message:
+          "Invalid credentials",
       });
     }
 
-    const isMatch = await bcrypt.compare(
-      password,
-      user.password
-    );
+    const isMatch =
+      await bcrypt.compare(
+        password,
+        user.password
+      );
 
     if (!isMatch) {
       return res.status(400).json({
-        message: "Invalid credentials",
+        message:
+          "Invalid credentials",
       });
     }
 
-    // save FCM token
-    if (fcmToken) {
-      user.fcmToken = fcmToken;
+    // ================= SAVE FCM TOKEN =================
+    if (
+      fcmToken &&
+      fcmToken.trim() !== ""
+    ) {
+      user.fcmToken =
+        fcmToken.trim();
+
       await user.save();
+
+      console.log(
+        "FCM TOKEN SAVED:",
+        user.fcmToken
+      );
+    } else {
+      console.log(
+        "FCM TOKEN NOT RECEIVED"
+      );
     }
 
-    // dealer approval check
+    // ================= DEALER APPROVAL =================
     if (
       user.role === "dealer" &&
       !user.isApproved
@@ -136,16 +167,29 @@ exports.loginUser = async (req, res) => {
         role: user.role,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      {
+        expiresIn: "7d",
+      }
     );
+
+    // fresh user data
+    const updatedUser =
+      await User.findById(
+        user._id
+      ).select("-password");
 
     res.json({
       message:
         "Login successful",
       token,
-      user,
+      user: updatedUser,
     });
   } catch (error) {
+    console.log(
+      "LOGIN ERROR:",
+      error
+    );
+
     res.status(500).json({
       message: error.message,
     });
