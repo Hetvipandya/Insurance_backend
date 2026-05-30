@@ -59,6 +59,7 @@ const path = require("path");
 const userRoutes = require("./routes/userRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
 const executiveRoutes = require("./routes/executiveRoutees"); 
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 
@@ -116,7 +117,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/user", userRoutes);
 app.use("/api/application", applicationRoutes);
 app.use('/api/executive', executiveRoutes);  
-
+app.use("/api/notification", notificationRoutes);
 
 // Test route
 app.get('/', (req, res) => {
