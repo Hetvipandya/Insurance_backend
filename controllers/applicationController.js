@@ -376,6 +376,11 @@ exports.updateApplication = async (req, res) => {
     console.log("BODY:", req.body);
     console.log("FILES:", req.files);
 
+    // ================= HELPER FUNCTION =================
+    const getFileUrl = (file) => {
+      return file.path;
+    };
+
     const application = await Application.findById(
       req.params.id
     );
@@ -457,11 +462,7 @@ exports.updateApplication = async (req, res) => {
           req.files[fieldName]
             .length > 0
         ) {
-       const getFileUrl = (file) => {
-  return file.path;
-};
-
-const uploadedFiles =
+       const uploadedFiles =
   req.files[
     fieldName
   ].map(
