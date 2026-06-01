@@ -246,6 +246,16 @@ const applicationSchema =
         type: String,
         trim: true,
       },
+
+      pdfFileName: {
+        type: String,
+        default: null,
+      },
+
+      pdfFileUrl: {
+        type: String,
+        default: null,
+      },
     },
     { timestamps: true }
   );

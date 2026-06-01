@@ -2,6 +2,8 @@ const Application = require("../models/Application");
 const Executive = require("../models/Executive");
 const admin = require("../utils/firebaseAdmin");
 const User = require("../models/User");
+const { generateApplicationPDF } = require("../utils/pdfGenerator");
+const path = require("path");
 
 // ================= CREATE =================
 exports.createApplication = async (req, res) => {
@@ -40,12 +42,21 @@ exports.createApplication = async (req, res) => {
     }
 
     // ================= GET CLOUDINARY URLS =================
-    const getFileUrls = (fieldName) => {
-      return req.files?.[fieldName]?.map(
-        (file) => file.path // Cloudinary URL
-      ) || [];
-    };
+const getFileUrl = (file) => {
+  return file.path;
+};
 
+const getFileUrls = (
+  fieldName
+) => {
+  return (
+    req.files?.[
+      fieldName
+    ]?.map(
+      getFileUrl
+    ) || []
+  );
+};
     const rcBookImages =
       getFileUrls("rcBookImages");
 
@@ -61,9 +72,14 @@ exports.createApplication = async (req, res) => {
     const otherImages =
       getFileUrls("otherImages");
 
-    const adminPolicyDocument =
-      req.files?.adminPolicyDocument?.[0]
-        ?.path || null;
+  const adminPolicyDocument =
+  req.files
+    ?.adminPolicyDocument?.[0]
+    ? getFileUrl(
+        req.files
+          .adminPolicyDocument[0]
+      )
+    : null;
 
     // ================= REQUIRED FILE CHECK =================
     if (
@@ -95,6 +111,22 @@ exports.createApplication = async (req, res) => {
 
       status: "pending",
     });
+
+    // ================= GENERATE PDF =================
+    try {
+      const uploadsDir = path.join(__dirname, "../uploads");
+      const pdfData = await generateApplicationPDF(app, uploadsDir);
+
+      // Update application with PDF info
+      app.pdfFileName = pdfData.fileName;
+      app.pdfFileUrl = pdfData.fileUrl;
+      await app.save();
+
+      console.log("✅ PDF generated successfully:", pdfData.fileName);
+    } catch (pdfError) {
+      console.error("PDF Generation Error:", pdfError);
+      // Continue even if PDF generation fails
+    }
 
     // ================= SEND PUSH NOTIFICATION =================
 try {
@@ -425,13 +457,16 @@ exports.updateApplication = async (req, res) => {
           req.files[fieldName]
             .length > 0
         ) {
-          const uploadedFiles =
-            req.files[
-              fieldName
-            ].map(
-              (file) =>
-                file.path
-            );
+       const getFileUrl = (file) => {
+  return file.path;
+};
+
+const uploadedFiles =
+  req.files[
+    fieldName
+  ].map(
+    getFileUrl
+  );
 
           // ================= SAVE HISTORY =================
           if (
@@ -507,11 +542,12 @@ exports.updateApplication = async (req, res) => {
           .adminPolicyDocument
           .length > 0
       ) {
-        application.adminPolicyDocument =
-          req.files
-            .adminPolicyDocument[0]
-            .path;
-      }
+      application.adminPolicyDocument =
+  getFileUrl(
+    req.files
+      .adminPolicyDocument[0]
+  );
+}
 
       // ================= RESET STATUS AFTER REUPLOAD =================
       application.status =
@@ -759,5 +795,141 @@ exports.deleteApplication = async (req, res) => {
     res.json({ message: "Application deleted" });
   } catch (err) {
     res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// ================= GET APPLICATION PDF =================
+exports.getApplicationPDF =
+  async (req, res) => {
+    try {
+      const { id } =
+        req.params;
+
+      const app =
+        await Application.findById(
+          id
+        );
+
+      if (!app) {
+        return res
+          .status(404)
+          .json({
+            success:
+              false,
+            message:
+              "Application not found",
+          });
+      }
+
+      // PDF generated or not
+      if (
+        !app.pdfFileName
+      ) {
+        return res
+          .status(404)
+          .json({
+            success:
+              false,
+            message:
+              "PDF not found",
+          });
+      }
+
+      // PDF path
+      const pdfPath =
+        path.join(
+          __dirname,
+          "../uploads",
+          app.pdfFileName
+        );
+
+      // File exists?
+      if (
+        !fs.existsSync(
+          pdfPath
+        )
+      ) {
+        return res
+          .status(404)
+          .json({
+            success:
+              false,
+            message:
+              "PDF file missing from server",
+          });
+      }
+
+      // ================= DIRECT DOWNLOAD =================
+      res.setHeader(
+        "Content-Type",
+        "application/pdf"
+      );
+
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${app.pdfFileName}"`
+      );
+
+      return res.sendFile(
+        pdfPath
+      );
+    } catch (
+      error
+    ) {
+      console.error(
+        "Get PDF Error:",
+        error
+      );
+
+      return res
+        .status(500)
+        .json({
+          success:
+            false,
+          message:
+            error.message ||
+            "Server Error",
+        });
+    }
+  };
+
+// ================= REGENERATE PDF =================
+exports.regenerateApplicationPDF = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const app = await Application.findById(id);
+
+    if (!app) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    // Regenerate PDF
+    const uploadsDir = path.join(__dirname, "../uploads");
+    const pdfData = await generateApplicationPDF(app, uploadsDir);
+
+    // Update application with PDF info
+    app.pdfFileName = pdfData.fileName;
+    app.pdfFileUrl = pdfData.fileUrl;
+    await app.save();
+
+    res.json({
+      success: true,
+      message: "PDF regenerated successfully",
+      data: {
+        pdfFileName: app.pdfFileName,
+        pdfFileUrl: app.pdfFileUrl,
+      },
+    });
+  } catch (error) {
+    console.error("Regenerate PDF Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server Error",
+    });
   }
 };

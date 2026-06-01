@@ -14,6 +14,8 @@ const {
   assignExecutive,
   updateApplication,
   deleteApplication,
+  getApplicationPDF,
+  regenerateApplicationPDF,
 } = require("../controllers/applicationController");
 
 const uploadFields = upload.fields([
@@ -47,5 +49,9 @@ router.put(
   updateApplication
 );
 router.delete("/delete/:id", authMiddleware, deleteApplication);
+
+// ================= PDF ROUTES =================
+router.get("/pdf/:id", authMiddleware, getApplicationPDF);
+router.post("/pdf/regenerate/:id", authMiddleware, regenerateApplicationPDF);
 
 module.exports = router;
