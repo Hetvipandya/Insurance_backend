@@ -233,18 +233,28 @@ exports.getApplicationStats = async (req, res) => {
       rejected: 0,
     };
 
-    // Map each status count to result
     stats.forEach((s) => {
-      const status = s._id || "pending";
+      const status = (s._id || "pending").toLowerCase();
+
       if (result.hasOwnProperty(status)) {
         result[status] = s.count;
       }
+
       result.total += s.count;
     });
 
-    res.json(result);
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Stats Error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
