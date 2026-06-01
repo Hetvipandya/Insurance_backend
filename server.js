@@ -63,8 +63,18 @@ const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(
+  express.json({
+    limit: "50mb",
+  })
+);
+
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: "50mb",
+  })
+);
 
 async function ensureAdminUser() {
   const emailId = process.env.ADMIN_EMAIL || 'admin10@gmail.com';
