@@ -68,6 +68,7 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
   try {
     const {
+      identifier, // new: accepts either email or mobile
       emailId,
       mobileNumber,
       password,
@@ -78,35 +79,30 @@ exports.loginUser = async (req, res) => {
     console.log("REQ BODY:", req.body);
     console.log("FCM TOKEN RECEIVED:", fcmToken);
 
-    if (
-      (!emailId && !mobileNumber) ||
-      !password
-    ) {
+    // identifier preferred, fallback to emailId/mobileNumber for compatibility
+    const id = identifier || emailId || mobileNumber;
+
+    if (!id || !password) {
       return res.status(400).json({
         message:
           "Email or mobile number and password are required",
       });
     }
 
+    // Determine whether identifier is email or phone
+    const isEmail = (identifier && identifier.includes("@")) || (emailId && emailId.includes("@"));
+
     const query = [];
+    if (isEmail) query.push({ emailId: (id || "").toLowerCase() });
+    else query.push({ mobileNumber: id });
 
-    if (emailId)
-      query.push({ emailId });
-
-    if (mobileNumber)
-      query.push({
-        mobileNumber,
-      });
-
-    const user = await User.findOne({
-      $or: query,
-    });
+    const user = await User.findOne({ $or: query });
 
     if (!user) {
       // Try TeamLeader collection for legacy/alternate TL logins
       const tlQuery = {};
-      if (emailId) tlQuery.Email = emailId;
-      if (mobileNumber) tlQuery.mobileNo = mobileNumber;
+      if (isEmail) tlQuery.Email = id;
+      else tlQuery.mobileNo = id;
 
       const teamLeader = await TeamLeader.findOne(tlQuery);
 
