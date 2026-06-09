@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const TeamLeader = require("../models/TeamLeader");
 
 // ===================== REGISTER =====================
 exports.registerUser = async (req, res) => {
@@ -102,10 +103,49 @@ exports.loginUser = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({
-        message:
-          "Invalid credentials",
-      });
+      // Try TeamLeader collection for legacy/alternate TL logins
+      const tlQuery = {};
+      if (emailId) tlQuery.Email = emailId;
+      if (mobileNumber) tlQuery.mobileNo = mobileNumber;
+
+      const teamLeader = await TeamLeader.findOne(tlQuery);
+
+      if (!teamLeader) {
+        return res.status(400).json({ message: "Invalid credentials" });
+      }
+
+      const isTLMatch = await bcrypt.compare(password, teamLeader.password);
+      if (!isTLMatch) {
+        return res.status(400).json({ message: "Invalid credentials" });
+      }
+
+      // Ensure a corresponding User exists (create if missing)
+      let tlUser = await User.findOne({ emailId: teamLeader.Email });
+      if (!tlUser) {
+        // address is required in User schema; use placeholder if not available
+        const placeholderAddress = "Not provided";
+        tlUser = await User.create({
+          fullName: teamLeader.Name,
+          emailId: teamLeader.Email,
+          mobileNumber: teamLeader.mobileNo,
+          address: placeholderAddress,
+          password: teamLeader.password, // already hashed
+          role: "teamleader",
+        });
+      }
+
+      // create token for teamleader
+      const tlToken = jwt.sign({ id: tlUser._id, role: "teamleader" }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+      // update FCM token if provided
+      if (fcmToken && fcmToken.trim() !== "") {
+        tlUser.fcmToken = fcmToken.trim();
+        await tlUser.save();
+      }
+
+      const sentUser = await User.findById(tlUser._id).select("-password");
+
+      return res.json({ message: "Login successful", token: tlToken, user: sentUser, role: "teamleader" });
     }
 
     const isMatch =
