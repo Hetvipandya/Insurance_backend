@@ -1,17 +1,26 @@
 const Executive = require("../models/Executive");
+const TeamLeader = require("../models/TeamLeader");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 exports.createExecutive = async (req, res) => {
     try {
-        const { Name, Email, password, mobileNo } = req.body;
+          const { Name, Email, password, mobileNo, teamLeaderId } = req.body;
         const hashedPassword = await bcrypt.hash(password, 10);
-        const executive = new Executive({
+          if (teamLeaderId) {
+            const tl = await TeamLeader.findById(teamLeaderId);
+            if (!tl) {
+              return res.status(400).json({ message: "Invalid teamLeaderId" });
+            }
+          }
+
+          const executive = new Executive({
             Name,
             Email,
             password: hashedPassword,
-            mobileNo
-        });
+            mobileNo,
+            teamLeader: teamLeaderId || undefined,
+          });
         await executive.save();
         res.status(201).json({ message: "Executive created successfully", executive });
     } catch (error) {
@@ -92,9 +101,9 @@ exports.getExecutiveById = async (req, res) => {
 };
 
 exports.updateExecutive = async (req, res) => {
-    try {
-        const { Name, Email, password, mobileNo } = req.body
-        const executive = await Executive.findById(req.params.id);
+  try {
+    const { Name, Email, password, mobileNo, teamLeaderId } = req.body
+    const executive = await Executive.findById(req.params.id);
         if (!executive) {
             return res.status(404).json({ message: "Executive not found" });
         }
@@ -102,6 +111,11 @@ exports.updateExecutive = async (req, res) => {
         if (Email) executive.Email = Email;
         if (password) executive.password = await bcrypt.hash(password, 10);
         if (mobileNo) executive.mobileNo = mobileNo;
+    if (teamLeaderId) {
+      const tl = await TeamLeader.findById(teamLeaderId);
+      if (!tl) return res.status(400).json({ message: "Invalid teamLeaderId" });
+      executive.teamLeader = teamLeaderId;
+    }
         await executive.save();
         res.status(200).json({ message: "Executive updated successfully", executive });
     } catch (error) {

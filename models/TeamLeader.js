@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const executiveSchema = new mongoose.Schema(
+const teamLeaderSchema = new mongoose.Schema(
   {
     Name: {
       type: String,
@@ -24,12 +24,6 @@ const executiveSchema = new mongoose.Schema(
       unique: true,
     },
 
-    teamLeader: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "TeamLeader",
-      required: false,
-    },
-
     assignedApplications: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -42,4 +36,4 @@ const executiveSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Executive", executiveSchema);
+module.exports = mongoose.model("TeamLeader", teamLeaderSchema);

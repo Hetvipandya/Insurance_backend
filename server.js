@@ -59,7 +59,9 @@ const path = require("path");
 const userRoutes = require("./routes/userRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
 const executiveRoutes = require("./routes/executiveRoutees"); 
+const teamLeaderRoutes = require("./routes/teamLeaderRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const policyDataRoutes = require("./routes/policyDataRoutes");
 
 const app = express();
 
@@ -127,7 +129,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/user", userRoutes);
 app.use("/api/application", applicationRoutes);
 app.use('/api/executive', executiveRoutes);  
+app.use('/api/teamleader', teamLeaderRoutes);
 app.use("/api/notification", notificationRoutes);
+app.use('/api/policydata', policyDataRoutes);
 
 // Test route
 app.get('/', (req, res) => {

@@ -1,0 +1,93 @@
+const TeamLeader = require("../models/TeamLeader");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+exports.createTeamLeader = async (req, res) => {
+  try {
+    const { Name, Email, password, mobileNo } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const leader = new TeamLeader({
+      Name,
+      Email,
+      password: hashedPassword,
+      mobileNo,
+    });
+    await leader.save();
+    res.status(201).json({ message: "TeamLeader created successfully", leader });
+  } catch (error) {
+    res.status(500).json({ message: "Error creating TeamLeader", error });
+  }
+};
+
+exports.loginTeamLeader = async (req, res) => {
+  try {
+    const { Email, password } = req.body;
+
+    if (!Email || !password) {
+      return res.status(400).json({ message: "Email and Password are required" });
+    }
+
+    const leader = await TeamLeader.findOne({ Email });
+
+    if (!leader) return res.status(404).json({ message: "TeamLeader not found" });
+
+    const isMatch = await bcrypt.compare(password, leader.password);
+    if (!isMatch) return res.status(401).json({ message: "Invalid Password" });
+
+    const token = jwt.sign(
+      { id: leader._id, Email: leader.Email, role: "teamleader" },
+      process.env.JWT_SECRET || "mySecretKey",
+      { expiresIn: "7d" }
+    );
+
+    return res.status(200).json({ message: "Login successful", token, leader });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Login error", error });
+  }
+};
+
+exports.getTeamLeaders = async (req, res) => {
+  try {
+    const leaders = await TeamLeader.find();
+    res.status(200).json(leaders);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching TeamLeaders", error });
+  }
+};
+
+exports.getTeamLeaderById = async (req, res) => {
+  try {
+    const leader = await TeamLeader.findById(req.params.id);
+    if (!leader) return res.status(404).json({ message: "TeamLeader not found" });
+    res.status(200).json(leader);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching TeamLeader", error });
+  }
+};
+
+exports.updateTeamLeader = async (req, res) => {
+  try {
+    const { Name, Email, password, mobileNo } = req.body;
+    const leader = await TeamLeader.findById(req.params.id);
+    if (!leader) return res.status(404).json({ message: "TeamLeader not found" });
+    if (Name) leader.Name = Name;
+    if (Email) leader.Email = Email;
+    if (password) leader.password = await bcrypt.hash(password, 10);
+    if (mobileNo) leader.mobileNo = mobileNo;
+    await leader.save();
+    res.status(200).json({ message: "TeamLeader updated successfully", leader });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating TeamLeader", error });
+  }
+};
+
+exports.deleteTeamLeader = async (req, res) => {
+  try {
+    const leader = await TeamLeader.findByIdAndDelete(req.params.id);
+    if (!leader) return res.status(404).json({ message: "TeamLeader not found" });
+    res.status(200).json({ message: "TeamLeader deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting TeamLeader", error });
+  }
+};

@@ -151,6 +151,12 @@ const applicationSchema =
         default: null,
       },
 
+      teamLeader: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "TeamLeader",
+        default: null,
+      },
+
       carNo: {
         type: String,
         required: true,
