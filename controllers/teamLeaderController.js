@@ -1,11 +1,25 @@
 const TeamLeader = require("../models/TeamLeader");
+const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 exports.createTeamLeader = async (req, res) => {
   try {
-    const { Name, Email, password, mobileNo } = req.body;
+    const { Name, Email, password, mobileNo, address } = req.body;
+
+    if (!Name || !Email || !password || !mobileNo || !address) {
+      return res.status(400).json({ message: "Name, Email, password, mobileNo and address are required" });
+    }
+
+    // prevent duplicates in User collection
+    const existingUser = await User.findOne({ $or: [{ emailId: Email }, { mobileNumber: mobileNo }] });
+    if (existingUser) {
+      return res.status(400).json({ message: "A user with this email or mobile number already exists" });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // create TeamLeader
     const leader = new TeamLeader({
       Name,
       Email,
@@ -13,8 +27,23 @@ exports.createTeamLeader = async (req, res) => {
       mobileNo,
     });
     await leader.save();
-    res.status(201).json({ message: "TeamLeader created successfully", leader });
+
+    // create corresponding User record so TL can login via /login
+    const user = await User.create({
+      fullName: Name,
+      emailId: Email,
+      mobileNumber: mobileNo,
+      address,
+      password: hashedPassword,
+      role: "teamleader",
+    });
+
+    res.status(201).json({ message: "TeamLeader created successfully", leader, user });
   } catch (error) {
+    // rollback if leader was created but user creation failed
+    if (error && error.code !== undefined) {
+      console.log("CREATE TL ERROR:", error);
+    }
     res.status(500).json({ message: "Error creating TeamLeader", error });
   }
 };
@@ -40,7 +69,7 @@ exports.loginTeamLeader = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    return res.status(200).json({ message: "Login successful", token, leader });
+    return res.status(200).json({ message: "Login successful", token, leader, role: "teamleader" });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ message: "Login error", error });

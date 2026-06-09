@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const teamLeaderSchema = new mongoose.Schema(
   {
-    Name: {
+    Name: { 
       type: String,
       required: true,
     },

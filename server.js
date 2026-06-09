@@ -128,7 +128,7 @@ app.use(express.urlencoded({ extended: true }));
 // ✅ ROUTES
 app.use("/api/user", userRoutes);
 app.use("/api/application", applicationRoutes);
-app.use('/api/executive', executiveRoutes);  
+app.use('/api/executive', executiveRoutes);   
 app.use('/api/teamleader', teamLeaderRoutes);
 app.use("/api/notification", notificationRoutes);
 app.use('/api/policydata', policyDataRoutes);
