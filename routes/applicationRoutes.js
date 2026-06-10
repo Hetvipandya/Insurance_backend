@@ -11,6 +11,7 @@ const {
   getAllApplicationsForAdmin, 
   getApplicationById,
   getApplicationByExecutive,
+   getApplicationByTeamLeader,
   assignExecutive,
   updateApplication,
   deleteApplication,
@@ -41,6 +42,11 @@ router.put(
   "/assign-executive/:id",
   authMiddleware,
   assignExecutive
+);
+router.get(
+  "/teamleader/:id",
+  authMiddleware,
+  getApplicationByTeamLeader
 );
 router.put(
   "/update/:id",

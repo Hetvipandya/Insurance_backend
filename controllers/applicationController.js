@@ -381,6 +381,58 @@
     }
   };
 
+  // ================= GET APPLICATIONS BY TEAM LEADER =================
+exports.getApplicationByTeamLeader =
+  async (req, res) => {
+    try {
+      const teamLeaderId =
+        req.params.id;
+
+      const apps =
+        await Application.find({
+          teamLeader:
+            teamLeaderId,
+        })
+          .populate(
+            "user",
+            "fullName emailId mobileNumber"
+          )
+          .populate(
+            "executive",
+            "Name Email mobileNo"
+          )
+          .populate(
+            "teamLeader",
+            "Name Email mobileNo"
+          )
+          .sort({
+            createdAt: -1,
+          });
+
+      return res
+        .status(200)
+        .json({
+          success: true,
+          data: apps,
+        });
+    } catch (err) {
+      console.error(
+        "Error fetching applications for team leader:",
+        err
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Server Error",
+          error:
+            err.message,
+        });
+    }
+  };
+
 
   // ================= GET SINGLE =================
   exports.getApplicationById = async (req, res) => {
