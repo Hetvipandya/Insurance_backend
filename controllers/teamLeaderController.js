@@ -3,50 +3,149 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-exports.createTeamLeader = async (req, res) => {
-  try {
-    const { Name, Email, password, mobileNo, address } = req.body;
+// exports.createTeamLeader = async (req, res) => {
+//   try {
+//     const { Name, Email, password, mobileNo, address } = req.body;
 
-    if (!Name || !Email || !password || !mobileNo || !address) {
-      return res.status(400).json({ message: "Name, Email, password, mobileNo and address are required" });
+//     if (!Name || !Email || !password || !mobileNo || !address) {
+//       return res.status(400).json({ message: "Name, Email, password, mobileNo and address are required" });
+//     }
+
+//     // prevent duplicates in User collection
+//     const existingUser = await User.findOne({ $or: [{ emailId: Email }, { mobileNumber: mobileNo }] });
+//     if (existingUser) {
+//       return res.status(400).json({ message: "A user with this email or mobile number already exists" });
+//     }
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
+
+//     // create TeamLeader
+//     const leader = new TeamLeader({
+//       Name,
+//       Email,
+//       password: hashedPassword,
+//       mobileNo,
+//     });
+//     await leader.save();
+
+//     // create corresponding User record so TL can login via /login
+//     const user = await User.create({
+//       fullName: Name,
+//       emailId: Email,
+//       mobileNumber: mobileNo,
+//       address,
+//       password: hashedPassword,
+//       role: "teamleader",
+//     });
+
+//     res.status(201).json({ message: "TeamLeader created successfully", leader, user });
+//   } catch (error) {
+//     // rollback if leader was created but user creation failed
+//     if (error && error.code !== undefined) {
+//       console.log("CREATE TL ERROR:", error);
+//     }
+//     res.status(500).json({ message: "Error creating TeamLeader", error });
+//   }
+// };
+
+exports.createTeamLeader =
+  async (req, res) => {
+    try {
+      const {
+        Name,
+        Email,
+        password,
+        mobileNo,
+        address,
+      } = req.body;
+
+      // Validation
+      if (
+        !Name ||
+        !Email ||
+        !password ||
+        !mobileNo ||
+        !address
+      ) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Name, Email, password, mobileNo and address are required",
+          });
+      }
+
+      // Check duplicate ONLY in TeamLeader collection
+      const existingLeader =
+        await TeamLeader.findOne(
+          {
+            $or: [
+              {
+                Email,
+              },
+              {
+                mobileNo,
+              },
+            ],
+          }
+        );
+
+      if (
+        existingLeader
+      ) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Team Leader with this email or mobile already exists",
+          });
+      }
+
+      // Hash password
+      const hashedPassword =
+        await bcrypt.hash(
+          password,
+          10
+        );
+
+      // Create Team Leader ONLY
+      const leader =
+        new TeamLeader({
+          Name,
+          Email,
+          password:
+            hashedPassword,
+          mobileNo,
+          address,
+        });
+
+      await leader.save();
+
+      return res
+        .status(201)
+        .json({
+          success: true,
+          message:
+            "Team Leader created successfully",
+          leader,
+        });
+    } catch (error) {
+      console.log(
+        "CREATE TL ERROR:",
+        error
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Error creating TeamLeader",
+          error:
+            error.message,
+        });
     }
-
-    // prevent duplicates in User collection
-    const existingUser = await User.findOne({ $or: [{ emailId: Email }, { mobileNumber: mobileNo }] });
-    if (existingUser) {
-      return res.status(400).json({ message: "A user with this email or mobile number already exists" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // create TeamLeader
-    const leader = new TeamLeader({
-      Name,
-      Email,
-      password: hashedPassword,
-      mobileNo,
-    });
-    await leader.save();
-
-    // create corresponding User record so TL can login via /login
-    const user = await User.create({
-      fullName: Name,
-      emailId: Email,
-      mobileNumber: mobileNo,
-      address,
-      password: hashedPassword,
-      role: "teamleader",
-    });
-
-    res.status(201).json({ message: "TeamLeader created successfully", leader, user });
-  } catch (error) {
-    // rollback if leader was created but user creation failed
-    if (error && error.code !== undefined) {
-      console.log("CREATE TL ERROR:", error);
-    }
-    res.status(500).json({ message: "Error creating TeamLeader", error });
-  }
-};
+  };
 
 exports.loginTeamLeader = async (req, res) => {
   try {
@@ -117,27 +216,6 @@ exports.deleteTeamLeader =
       const { id } =
         req.params;
 
-      console.log(
-        "Delete ID:",
-        id
-      );
-
-      // validate mongo id
-      if (
-        !mongoose.Types.ObjectId.isValid(
-          id
-        )
-      ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "Invalid Team Leader ID",
-          });
-      }
-
-      // Find team leader
       const teamLeader =
         await TeamLeader.findById(
           id
@@ -149,40 +227,13 @@ exports.deleteTeamLeader =
         return res
           .status(404)
           .json({
-            success: false,
             message:
               "Team Leader not found",
           });
       }
 
-      console.log(
-        "Found TL:",
-        teamLeader
-      );
-
-      // Delete Team Leader
-      const deletedTL =
-        await TeamLeader.findByIdAndDelete(
-          id
-        );
-
-      // Delete user by email
-      const deletedUser =
-        await User.findOneAndDelete(
-          {
-            Email:
-              teamLeader.Email,
-          }
-        );
-
-      console.log(
-        "Deleted TL:",
-        deletedTL
-      );
-
-      console.log(
-        "Deleted User:",
-        deletedUser
+      await TeamLeader.findByIdAndDelete(
+        id
       );
 
       return res
@@ -191,7 +242,6 @@ exports.deleteTeamLeader =
           success: true,
           message:
             "Team Leader deleted successfully",
-          deletedTL,
         });
     } catch (error) {
       console.log(
@@ -204,7 +254,7 @@ exports.deleteTeamLeader =
         .json({
           success: false,
           message:
-            error.message,
+            "Server Error",
         });
     }
   };
