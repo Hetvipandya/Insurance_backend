@@ -10,7 +10,7 @@ exports.registerUser = async (req, res) => {
       fullName,
       emailId,
       mobileNumber,
-      address,
+      address, 
       password, 
       confirmPassword,
     } = req.body;
@@ -96,7 +96,19 @@ exports.loginUser = async (req, res) => {
     if (isEmail) query.push({ emailId: (id || "").toLowerCase() });
     else query.push({ mobileNumber: id });
 
-    const user = await User.findOne({ $or: query });
+   console.log("QUERY:", query);
+
+const user =
+  await User.findOne({
+    $or: query,
+  });
+
+console.log(
+  "USER FOUND:",
+  user
+    ? user.emailId
+    : "No User"
+);
 
     if (!user) {
       // Try TeamLeader collection for legacy/alternate TL logins
@@ -144,11 +156,26 @@ exports.loginUser = async (req, res) => {
       return res.json({ message: "Login successful", token: tlToken, user: sentUser, role: "teamleader" });
     }
 
-    const isMatch =
-      await bcrypt.compare(
-        password,
-        user.password
-      );
+ console.log(
+  "Entered Password:",
+  password
+);
+
+console.log(
+  "DB Password:",
+  user.password
+);
+
+const isMatch =
+  await bcrypt.compare(
+    password,
+    user.password
+  );
+
+console.log(
+  "PASSWORD MATCH:",
+  isMatch
+);
 
     if (!isMatch) {
       return res.status(400).json({
