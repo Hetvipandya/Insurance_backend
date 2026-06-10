@@ -111,12 +111,57 @@ exports.updateTeamLeader = async (req, res) => {
   }
 };
 
-exports.deleteTeamLeader = async (req, res) => {
-  try {
-    const leader = await TeamLeader.findByIdAndDelete(req.params.id);
-    if (!leader) return res.status(404).json({ message: "TeamLeader not found" });
-    res.status(200).json({ message: "TeamLeader deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Error deleting TeamLeader", error });
-  }
-};
+exports.deleteTeamLeader =
+  async (req, res) => {
+    try {
+      const { id } =
+        req.params;
+
+      // Find TL
+      const teamLeader =
+        await TeamLeader.findById(
+          id
+        );
+
+      if (
+        !teamLeader
+      ) {
+        return res
+          .status(404)
+          .json({
+            message:
+              "Team Leader not found",
+          });
+      }
+
+      // Delete from TeamLeader collection
+      await TeamLeader.findByIdAndDelete(
+        id
+      );
+
+      // Also delete from User collection
+      await User.findOneAndDelete(
+        {
+          Email:
+            teamLeader.Email,
+        }
+      );
+
+      res.status(200).json({
+        success: true,
+        message:
+          "Team Leader deleted successfully",
+      });
+    } catch (error) {
+      console.log(
+        "Delete Error:",
+        error
+      );
+
+      res.status(500).json({
+        success: false,
+        message:
+          "Server Error",
+      });
+    }
+  };
