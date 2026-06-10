@@ -182,141 +182,72 @@
 
 
 
-exports.getMyApplications = async (
-  req,
-  res
-) => {
+exports.getMyApplications = async (req, res) => {
   try {
-    const userId =
-      req.user?.id;
+    const userId = req.user?.id || req.user?._id;
+    const userRole = (req.user?.role || "").toLowerCase();
 
-    const userRole =
-      req.user?.role
-        ?.toLowerCase();
-
-    // ================= AUTH CHECK =================
+    // AUTH CHECK
     if (!userId) {
-      return res
-        .status(401)
-        .json({
-          success:
-            false,
-          message:
-            "Unauthorized",
-        });
+      return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    let apps = [];
+    // Optional filters
+    const page = Math.max(1, parseInt(req.query.page || "1", 10));
+    const limit = Math.max(1, parseInt(req.query.limit || "0", 10));
+    const statusFilter = req.query.status;
 
-    // ================= ADMIN =================
-    if (
-      userRole ===
-      "admin"
-    ) {
-      apps =
-        await Application.find()
-          .populate(
-            "user",
-            "fullName emailId mobileNumber"
-          )
-          .populate(
-            "executive",
-            "Name Email mobileNo"
-          )
-          .populate(
-            "teamLeader",
-            "Name Email mobileNo"
-          )
-          .sort({
-            createdAt:
-              -1,
-          });
-    }
+    let query = {};
 
-    // ================= TEAM LEADER =================
-    else if (userRole === "teamleader" || userRole === "tl") {
-      // Resolve TeamLeader record for the logged-in user.
-      // TeamLeaders may authenticate either via a linked User (user field)
-      // or directly with their TeamLeader account (token id = TeamLeader._id).
+    if (userRole === "admin") {
+      query = {};
+    } else if (userRole === "teamleader" || userRole === "tl") {
+      // Resolve TeamLeader by linked user or by id
       let tl = await TeamLeader.findOne({ user: userId });
-      if (!tl) {
-        tl = await TeamLeader.findById(userId);
-      }
+      if (!tl) tl = await TeamLeader.findById(userId);
 
       if (!tl) {
         return res.status(404).json({ success: false, message: "Team Leader not found" });
       }
 
-      apps = await Application.find({ teamLeader: tl._id })
-        .populate("user", "fullName emailId mobileNumber")
-        .populate("executive", "Name Email mobileNo")
-        .populate("teamLeader", "Name Email mobileNo")
-        .sort({ createdAt: -1 });
-    }
-
-    // ================= EXECUTIVE =================
-    else if (userRole === "executive" || userRole === "exe") {
-      // Resolve Executive record for the logged-in user.
-      // Executives may authenticate directly (token id = Executive._id)
-      // If Executive model ever links to User, also try that lookup.
+      query = { teamLeader: tl._id };
+    } else if (userRole === "executive" || userRole === "exe") {
+      // Resolve Executive by id or linked user
       let executive = await Executive.findById(userId);
-      if (!executive) {
-        executive = await Executive.findOne({ user: userId });
-      }
+      if (!executive) executive = await Executive.findOne({ user: userId });
 
       if (!executive) {
         return res.status(404).json({ success: false, message: "Executive not found" });
       }
 
-      apps = await Application.find({ executive: executive._id })
-        .populate("user", "fullName emailId mobileNumber")
-        .populate("executive", "Name Email mobileNo")
-        .populate("teamLeader", "Name Email mobileNo")
-        .sort({ createdAt: -1 });
+      query = { executive: executive._id };
+    } else {
+      // default: dealer/user
+      query = { user: userId };
     }
 
-    // ================= NORMAL USER =================
-    else {
-      apps =
-        await Application.find(
-          {
-            user:
-              userId,
-          }
-        )
-          .populate(
-            "user",
-            "fullName emailId mobileNumber"
-          )
-          .sort({
-            createdAt:
-              -1,
-          });
+    if (statusFilter) {
+      query.status = statusFilter;
     }
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        count:
-          apps.length,
-        data: apps,
-      });
+    let q = Application.find(query)
+      .populate("user", "fullName")
+      .populate("executive", "Name")
+      .sort({ createdAt: -1 });
+
+    // apply pagination if limit provided
+    let total = await Application.countDocuments(query);
+    if (limit > 0) {
+      const skip = (page - 1) * limit;
+      q = q.skip(skip).limit(limit);
+    }
+
+    const apps = await q.exec();
+
+    return res.status(200).json({ success: true, data: apps, total, page: limit > 0 ? page : undefined, limit: limit || undefined });
   } catch (err) {
-    console.error(
-      "GET MY APPLICATIONS ERROR:",
-      err
-    );
-
-    return res
-      .status(500)
-      .json({
-        success:
-          false,
-        message:
-          err.message ||
-          "Server Error",
-      });
+    console.error("GET MY APPLICATIONS ERROR:", err);
+    return res.status(500).json({ success: false, message: err.message || "Server Error" });
   }
 };
 

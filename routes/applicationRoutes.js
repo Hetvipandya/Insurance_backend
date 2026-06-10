@@ -36,7 +36,6 @@ router.get(
   getApplicationStats
 );
 router.get("/admin", authMiddleware, getAllApplicationsForAdmin);
-router.get("/:id", authMiddleware, getApplicationById);
 router.get("/executive/:id", authMiddleware, getApplicationByExecutive);
 router.put(
   "/assign-executive/:id",
@@ -51,10 +50,11 @@ router.get(
 router.put(
   "/update/:id",
   authMiddleware,
-    uploadFields,
+  uploadFields,
   updateApplication
 );
 router.delete("/delete/:id", authMiddleware, deleteApplication);
+router.get("/:id", authMiddleware, getApplicationById);
 
 // ================= PDF ROUTES =================
 router.get("/pdf/:id", authMiddleware, getApplicationPDF);
