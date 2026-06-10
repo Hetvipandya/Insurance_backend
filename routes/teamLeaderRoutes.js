@@ -13,7 +13,7 @@ const {
 router.post("/create", createTeamLeader);
 router.post("/login", loginTeamLeader);
 
-router.get("/", getTeamLeaders);
+router.get("/all", getTeamLeaders);
 router.get("/:id", getTeamLeaderById);
 router.put("/update/:id", updateTeamLeader);
 router.delete("/delete/:id", deleteTeamLeader);
