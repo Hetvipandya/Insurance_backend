@@ -13,6 +13,12 @@ const {
 router.post("/create", createTeamLeader);
 router.post("/login", loginTeamLeader);
 
+router.get(
+  "/me",
+  authMiddleware,
+  getLoggedInTeamLeader
+);
+
 router.get("/all", getTeamLeaders);
 router.get("/:id", getTeamLeaderById);
 router.put("/update/:id", updateTeamLeader);

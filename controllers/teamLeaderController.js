@@ -95,6 +95,50 @@ exports.createTeamLeader =
     }
   };
 
+
+exports.getLoggedInTeamLeader =
+  async (req, res) => {
+    try {
+      const userId =
+        req.user.id;
+
+      const teamLeader =
+        await TeamLeader.findOne({
+          user: userId,
+        });
+
+      if (!teamLeader) {
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message:
+              "Team Leader not found",
+          });
+      }
+
+      return res
+        .status(200)
+        .json({
+          success: true,
+          data: teamLeader,
+        });
+    } catch (err) {
+      console.log(
+        "Get TL Error:",
+        err
+      );
+
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            err.message,
+        });
+    }
+  };
+  
 exports.loginTeamLeader = async (req, res) => {
   try {
     const { Email, password } = req.body;
