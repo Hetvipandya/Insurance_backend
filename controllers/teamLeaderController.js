@@ -99,13 +99,13 @@ exports.createTeamLeader =
 exports.getLoggedInTeamLeader =
   async (req, res) => {
     try {
-      const userId =
+      const teamLeaderId =
         req.user.id;
 
       const teamLeader =
-        await TeamLeader.findOne({
-          user: userId,
-        });
+        await TeamLeader.findById(
+          teamLeaderId
+        );
 
       if (!teamLeader) {
         return res
@@ -138,7 +138,7 @@ exports.getLoggedInTeamLeader =
         });
     }
   };
-  
+
 exports.loginTeamLeader = async (req, res) => {
   try {
     const { Email, password } = req.body;
