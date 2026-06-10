@@ -11,6 +11,8 @@ const {
    getLoggedInTeamLeader,
 } = require("../controllers/teamLeaderController");
 
+const { authMiddleware } = require("../middleware/auth");
+
 router.post("/create", createTeamLeader);
 router.post("/login", loginTeamLeader);
 
