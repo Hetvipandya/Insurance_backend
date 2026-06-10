@@ -8,6 +8,7 @@ const {
   getTeamLeaderById,
   updateTeamLeader,
   deleteTeamLeader,
+   getLoggedInTeamLeader,
 } = require("../controllers/teamLeaderController");
 
 router.post("/create", createTeamLeader);
