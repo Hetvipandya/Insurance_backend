@@ -187,6 +187,9 @@ exports.getMyApplications = async (req, res) => {
     const userId = req.user?.id || req.user?._id;
     const userRole = (req.user?.role || "").toLowerCase();
 
+    // Debug logs to help frontend troubleshooting
+    console.log("GET /api/application/my called. req.user:", req.user);
+
     // AUTH CHECK
     if (!userId) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -228,6 +231,7 @@ exports.getMyApplications = async (req, res) => {
 
     if (statusFilter) {
       query.status = statusFilter;
+      console.log("Applying status filter:", statusFilter);
     }
 
     let q = Application.find(query)
@@ -243,6 +247,8 @@ exports.getMyApplications = async (req, res) => {
     }
 
     const apps = await q.exec();
+
+    console.log("Query used for /my:", JSON.stringify(query), "returned", apps.length, "applications");
 
     return res.status(200).json({ success: true, data: apps, total, page: limit > 0 ? page : undefined, limit: limit || undefined });
   } catch (err) {
