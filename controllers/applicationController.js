@@ -234,109 +234,45 @@ exports.getMyApplications = async (
     }
 
     // ================= TEAM LEADER =================
-    else if (
-      userRole ===
-        "teamleader" ||
-      userRole ===
-        "tl"
-    ) {
-      // find logged in TL
-      const tl =
-        await TeamLeader.findOne(
-          {
-            user:
-              userId,
-          }
-        );
-
+    else if (userRole === "teamleader" || userRole === "tl") {
+      // Resolve TeamLeader record for the logged-in user.
+      // TeamLeaders may authenticate either via a linked User (user field)
+      // or directly with their TeamLeader account (token id = TeamLeader._id).
+      let tl = await TeamLeader.findOne({ user: userId });
       if (!tl) {
-        return res
-          .status(404)
-          .json({
-            success:
-              false,
-            message:
-              "Team Leader not found",
-          });
+        tl = await TeamLeader.findById(userId);
       }
 
-      apps =
-        await Application.find(
-          {
-            teamLeader:
-              tl._id,
-          }
-        )
-          .populate(
-            "user",
-            "fullName emailId mobileNumber"
-          )
-          .populate(
-            "executive",
-            "Name Email mobileNo"
-          )
-          .populate(
-            "teamLeader",
-            "Name Email mobileNo"
-          )
-          .sort({
-            createdAt:
-              -1,
-          });
+      if (!tl) {
+        return res.status(404).json({ success: false, message: "Team Leader not found" });
+      }
+
+      apps = await Application.find({ teamLeader: tl._id })
+        .populate("user", "fullName emailId mobileNumber")
+        .populate("executive", "Name Email mobileNo")
+        .populate("teamLeader", "Name Email mobileNo")
+        .sort({ createdAt: -1 });
     }
 
     // ================= EXECUTIVE =================
-    else if (
-      userRole ===
-        "executive" ||
-      userRole ===
-        "exe"
-    ) {
-      // find logged in executive
-      const executive =
-        await Executive.findOne(
-          {
-            user:
-              userId,
-          }
-        );
-
-      if (
-        !executive
-      ) {
-        return res
-          .status(404)
-          .json({
-            success:
-              false,
-            message:
-              "Executive not found",
-          });
+    else if (userRole === "executive" || userRole === "exe") {
+      // Resolve Executive record for the logged-in user.
+      // Executives may authenticate directly (token id = Executive._id)
+      // If Executive model ever links to User, also try that lookup.
+      let executive = await Executive.findById(userId);
+      if (!executive) {
+        executive = await Executive.findOne({ user: userId });
       }
 
-      apps =
-        await Application.find(
-          {
-            executive:
-              executive._id,
-          }
-        )
-          .populate(
-            "user",
-            "fullName emailId mobileNumber"
-          )
-          .populate(
-            "executive",
-            "Name Email mobileNo"
-          )
-          .populate(
-            "teamLeader",
-            "Name Email mobileNo"
-          )
-          .sort({
-            createdAt:
-              -1,
-          });
+      if (!executive) {
+        return res.status(404).json({ success: false, message: "Executive not found" });
+      }
+
+      apps = await Application.find({ executive: executive._id })
+        .populate("user", "fullName emailId mobileNumber")
+        .populate("executive", "Name Email mobileNo")
+        .populate("teamLeader", "Name Email mobileNo")
+        .sort({ createdAt: -1 });
     }
 
     // ================= NORMAL USER =================
