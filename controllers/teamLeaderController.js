@@ -3,48 +3,131 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-exports.createTeamLeader = async (req, res) => {
+exports.createTeamLeader = async (
+  req,
+  res
+) => {
   try {
-    const { Name, Email, password, mobileNo, address } = req.body;
-
-    if (!Name || !Email || !password || !mobileNo || !address) {
-      return res.status(400).json({ message: "Name, Email, password, mobileNo and address are required" });
-    }
-
-    // prevent duplicates in User collection
-    const existingUser = await User.findOne({ $or: [{ emailId: Email }, { mobileNumber: mobileNo }] });
-    if (existingUser) {
-      return res.status(400).json({ message: "A user with this email or mobile number already exists" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // create TeamLeader
-    const leader = new TeamLeader({
+    const {
       Name,
       Email,
-      password: hashedPassword,
+      password,
       mobileNo,
-    });
-    await leader.save();
-
-    // create corresponding User record so TL can login via /login
-    const user = await User.create({
-      fullName: Name,
-      emailId: Email,
-      mobileNumber: mobileNo,
       address,
-      password: hashedPassword,
-      role: "teamleader",
-    });
+    } = req.body;
 
-    res.status(201).json({ message: "TeamLeader created successfully", leader, user });
-  } catch (error) {
-    // rollback if leader was created but user creation failed
-    if (error && error.code !== undefined) {
-      console.log("CREATE TL ERROR:", error);
+    console.log(
+      "REQ BODY:",
+      req.body
+    );
+
+    if (
+      !Name ||
+      !Email ||
+      !password ||
+      !mobileNo ||
+      !address
+    ) {
+      return res.status(400).json({
+        message:
+          "All fields are required",
+      });
     }
-    res.status(500).json({ message: "Error creating TeamLeader", error });
+
+    // check duplicate user
+    const existingUser =
+      await User.findOne({
+        $or: [
+          {
+            emailId:
+              Email,
+          },
+          {
+            mobileNumber:
+              mobileNo,
+          },
+        ],
+      });
+
+    if (existingUser) {
+      return res.status(400).json({
+        message:
+          "A user with this email or mobile number already exists",
+      });
+    }
+
+    // check duplicate TL
+    const existingTL =
+      await TeamLeader.findOne({
+        $or: [
+          { Email },
+          {
+            mobileNo,
+          },
+        ],
+      });
+
+    if (existingTL) {
+      return res.status(400).json({
+        message:
+          "Team Leader already exists",
+      });
+    }
+
+    const hashedPassword =
+      await bcrypt.hash(
+        password,
+        10
+      );
+
+    // Create USER FIRST
+    const user =
+      await User.create({
+        fullName:
+          Name,
+        emailId:
+          Email,
+        mobileNumber:
+          mobileNo,
+        address:
+          address,
+        password:
+          hashedPassword,
+        role:
+          "teamleader",
+      });
+
+    // Create TeamLeader
+    const leader =
+      await TeamLeader.create({
+        Name,
+        Email,
+        password:
+          hashedPassword,
+        mobileNo,
+        address,
+        user:
+          user._id,
+      });
+
+    return res
+      .status(201)
+      .json({
+        success: true,
+        message:
+          "Team Leader created successfully",
+        leader,
+      });
+  } catch (error) {
+    console.log(
+      "CREATE TL ERROR:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        error.message,
+    });
   }
 };
 
