@@ -117,7 +117,27 @@ exports.deleteTeamLeader =
       const { id } =
         req.params;
 
-      // Find TL
+      console.log(
+        "Delete ID:",
+        id
+      );
+
+      // validate mongo id
+      if (
+        !mongoose.Types.ObjectId.isValid(
+          id
+        )
+      ) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Invalid Team Leader ID",
+          });
+      }
+
+      // Find team leader
       const teamLeader =
         await TeamLeader.findById(
           id
@@ -129,39 +149,62 @@ exports.deleteTeamLeader =
         return res
           .status(404)
           .json({
+            success: false,
             message:
               "Team Leader not found",
           });
       }
 
-      // Delete from TeamLeader collection
-      await TeamLeader.findByIdAndDelete(
-        id
+      console.log(
+        "Found TL:",
+        teamLeader
       );
 
-      // Also delete from User collection
-      await User.findOneAndDelete(
-        {
-          Email:
-            teamLeader.Email,
-        }
+      // Delete Team Leader
+      const deletedTL =
+        await TeamLeader.findByIdAndDelete(
+          id
+        );
+
+      // Delete user by email
+      const deletedUser =
+        await User.findOneAndDelete(
+          {
+            Email:
+              teamLeader.Email,
+          }
+        );
+
+      console.log(
+        "Deleted TL:",
+        deletedTL
       );
 
-      res.status(200).json({
-        success: true,
-        message:
-          "Team Leader deleted successfully",
-      });
+      console.log(
+        "Deleted User:",
+        deletedUser
+      );
+
+      return res
+        .status(200)
+        .json({
+          success: true,
+          message:
+            "Team Leader deleted successfully",
+          deletedTL,
+        });
     } catch (error) {
       console.log(
         "Delete Error:",
         error
       );
 
-      res.status(500).json({
-        success: false,
-        message:
-          "Server Error",
-      });
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            error.message,
+        });
     }
   };
