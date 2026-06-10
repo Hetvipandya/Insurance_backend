@@ -189,26 +189,41 @@
 
       let apps;
 
-      // ✅ Admin → ALL applications
+      // Admin → ALL applications
       if (userRole === "admin") {
         apps = await Application.find()
-    .populate("user", "fullName emailId mobileNumber")
-    .populate("executive", "Name emailId mobileNumber")
-    .populate("teamLeader", "Name Email mobileNo")
-    .sort({ createdAt: -1 });
-      } 
-      // ✅ Normal user → Only own applications
+          .populate("user", "fullName emailId mobileNumber")
+          .populate("executive", "Name emailId mobileNumber")
+          .populate("teamLeader", "Name Email mobileNo")
+          .sort({ createdAt: -1 });
+      }
+      // Team Leader → applications assigned to this TL
+      else if (userRole === "teamleader" || userRole === "tl") {
+        apps = await Application.find({ teamLeader: userId })
+          .populate("user", "fullName emailId mobileNumber")
+          .populate("executive", "Name emailId mobileNumber")
+          .populate("teamLeader", "Name Email mobileNo")
+          .sort({ createdAt: -1 });
+      }
+      // Executive → applications assigned to this executive
+      else if (userRole === "executive" || userRole === "exe") {
+        apps = await Application.find({ executive: userId })
+          .populate("user", "fullName emailId mobileNumber")
+          .populate("executive", "Name emailId mobileNumber")
+          .populate("teamLeader", "Name Email mobileNo")
+          .sort({ createdAt: -1 });
+      }
+      // Normal user → Only own applications
       else {
         apps = await Application.find({ user: userId })
           .populate("user", "fullName emailId mobileNumber")
           .sort({ createdAt: -1 });
       }
 
-      res.json(apps);
-
+      return res.json(apps);
     } catch (err) {
       console.error("Error fetching applications:", err);
-      res.status(500).json({ message: "Server Error" });
+      return res.status(500).json({ message: "Server Error" });
     }
   };
 
