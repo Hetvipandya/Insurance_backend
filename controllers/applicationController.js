@@ -182,50 +182,207 @@
 
 
 
-  exports.getMyApplications = async (req, res) => {
-    try {
-      const userId = req.user.id;
-      const userRole = req.user.role;
+exports.getMyApplications = async (
+  req,
+  res
+) => {
+  try {
+    const userId =
+      req.user?.id;
 
-      let apps;
+    const userRole =
+      req.user?.role
+        ?.toLowerCase();
 
-      // Admin → ALL applications
-      if (userRole === "admin") {
-        apps = await Application.find()
-          .populate("user", "fullName emailId mobileNumber")
-          .populate("executive", "Name emailId mobileNumber")
-          .populate("teamLeader", "Name Email mobileNo")
-          .sort({ createdAt: -1 });
-      }
-      // Team Leader → applications assigned to this TL
-      else if (userRole === "teamleader" || userRole === "tl") {
-        apps = await Application.find({ teamLeader: userId })
-          .populate("user", "fullName emailId mobileNumber")
-          .populate("executive", "Name emailId mobileNumber")
-          .populate("teamLeader", "Name Email mobileNo")
-          .sort({ createdAt: -1 });
-      }
-      // Executive → applications assigned to this executive
-      else if (userRole === "executive" || userRole === "exe") {
-        apps = await Application.find({ executive: userId })
-          .populate("user", "fullName emailId mobileNumber")
-          .populate("executive", "Name emailId mobileNumber")
-          .populate("teamLeader", "Name Email mobileNo")
-          .sort({ createdAt: -1 });
-      }
-      // Normal user → Only own applications
-      else {
-        apps = await Application.find({ user: userId })
-          .populate("user", "fullName emailId mobileNumber")
-          .sort({ createdAt: -1 });
-      }
-
-      return res.json(apps);
-    } catch (err) {
-      console.error("Error fetching applications:", err);
-      return res.status(500).json({ message: "Server Error" });
+    // ================= AUTH CHECK =================
+    if (!userId) {
+      return res
+        .status(401)
+        .json({
+          success:
+            false,
+          message:
+            "Unauthorized",
+        });
     }
-  };
+
+    let apps = [];
+
+    // ================= ADMIN =================
+    if (
+      userRole ===
+      "admin"
+    ) {
+      apps =
+        await Application.find()
+          .populate(
+            "user",
+            "fullName emailId mobileNumber"
+          )
+          .populate(
+            "executive",
+            "Name Email mobileNo"
+          )
+          .populate(
+            "teamLeader",
+            "Name Email mobileNo"
+          )
+          .sort({
+            createdAt:
+              -1,
+          });
+    }
+
+    // ================= TEAM LEADER =================
+    else if (
+      userRole ===
+        "teamleader" ||
+      userRole ===
+        "tl"
+    ) {
+      // find logged in TL
+      const tl =
+        await TeamLeader.findOne(
+          {
+            user:
+              userId,
+          }
+        );
+
+      if (!tl) {
+        return res
+          .status(404)
+          .json({
+            success:
+              false,
+            message:
+              "Team Leader not found",
+          });
+      }
+
+      apps =
+        await Application.find(
+          {
+            teamLeader:
+              tl._id,
+          }
+        )
+          .populate(
+            "user",
+            "fullName emailId mobileNumber"
+          )
+          .populate(
+            "executive",
+            "Name Email mobileNo"
+          )
+          .populate(
+            "teamLeader",
+            "Name Email mobileNo"
+          )
+          .sort({
+            createdAt:
+              -1,
+          });
+    }
+
+    // ================= EXECUTIVE =================
+    else if (
+      userRole ===
+        "executive" ||
+      userRole ===
+        "exe"
+    ) {
+      // find logged in executive
+      const executive =
+        await Executive.findOne(
+          {
+            user:
+              userId,
+          }
+        );
+
+      if (
+        !executive
+      ) {
+        return res
+          .status(404)
+          .json({
+            success:
+              false,
+            message:
+              "Executive not found",
+          });
+      }
+
+      apps =
+        await Application.find(
+          {
+            executive:
+              executive._id,
+          }
+        )
+          .populate(
+            "user",
+            "fullName emailId mobileNumber"
+          )
+          .populate(
+            "executive",
+            "Name Email mobileNo"
+          )
+          .populate(
+            "teamLeader",
+            "Name Email mobileNo"
+          )
+          .sort({
+            createdAt:
+              -1,
+          });
+    }
+
+    // ================= NORMAL USER =================
+    else {
+      apps =
+        await Application.find(
+          {
+            user:
+              userId,
+          }
+        )
+          .populate(
+            "user",
+            "fullName emailId mobileNumber"
+          )
+          .sort({
+            createdAt:
+              -1,
+          });
+    }
+
+    return res
+      .status(200)
+      .json({
+        success: true,
+        count:
+          apps.length,
+        data: apps,
+      });
+  } catch (err) {
+    console.error(
+      "GET MY APPLICATIONS ERROR:",
+      err
+    );
+
+    return res
+      .status(500)
+      .json({
+        success:
+          false,
+        message:
+          err.message ||
+          "Server Error",
+      });
+  }
+};
 
   exports.getApplicationStats = async (req, res) => {
     try {

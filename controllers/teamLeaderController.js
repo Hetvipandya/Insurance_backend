@@ -56,94 +56,42 @@ exports.createTeamLeader =
         Email,
         password,
         mobileNo,
-        address,
       } = req.body;
 
-      // Validation
-      if (
-        !Name ||
-        !Email ||
-        !password ||
-        !mobileNo ||
-        !address
-      ) {
-        return res
-          .status(400)
-          .json({
-            message:
-              "Name, Email, password, mobileNo and address are required",
-          });
-      }
-
-      // Check duplicate ONLY in TeamLeader collection
-      const existingLeader =
-        await TeamLeader.findOne(
-          {
-            $or: [
-              {
-                Email,
-              },
-              {
-                mobileNo,
-              },
-            ],
-          }
-        );
-
-      if (
-        existingLeader
-      ) {
-        return res
-          .status(400)
-          .json({
-            message:
-              "Team Leader with this email or mobile already exists",
-          });
-      }
-
-      // Hash password
-      const hashedPassword =
-        await bcrypt.hash(
+      // create user
+      const createdUser =
+        await User.create({
+          fullName: Name,
+          emailId: Email,
           password,
-          10
-        );
+          mobileNumber:
+            mobileNo,
+          role:
+            "teamleader",
+        });
 
-      // Create Team Leader ONLY
-      const leader =
-        new TeamLeader({
+      // create TL
+      const tl =
+        await TeamLeader.create({
+          user:
+            createdUser._id,
+
           Name,
           Email,
-          password:
-            hashedPassword,
+          password,
           mobileNo,
-          address,
         });
 
-      await leader.save();
-
-      return res
-        .status(201)
-        .json({
-          success: true,
-          message:
-            "Team Leader created successfully",
-          leader,
-        });
+      res.status(201).json({
+        success: true,
+        data: tl,
+      });
     } catch (error) {
-      console.log(
-        "CREATE TL ERROR:",
-        error
-      );
-
-      return res
-        .status(500)
-        .json({
-          success: false,
-          message:
-            "Error creating TeamLeader",
-          error:
-            error.message,
-        });
+      res.status(500).json({
+        success: false,
+        message:
+          error.message,
+      });
     }
   };
 
