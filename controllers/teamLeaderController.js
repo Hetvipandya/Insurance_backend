@@ -228,7 +228,6 @@ exports.updateTeamLeader = async (req, res) => {
   try {
     const { Name, Email, password, mobileNo, address } = req.body;
 
-    // 1. Find existing document FIRST
     const leader = await TeamLeader.findById(req.params.id);
 
     if (!leader) {
@@ -237,30 +236,29 @@ exports.updateTeamLeader = async (req, res) => {
       });
     }
 
-    // 2. VERY IMPORTANT: ensure user exists
+    // ❗ IMPORTANT CHECK (but don't break update)
     if (!leader.user) {
       return res.status(400).json({
         message: "Invalid TeamLeader: missing user reference",
       });
     }
 
-    // 3. Update only provided fields
-    if (Name !== undefined) leader.Name = Name;
-    if (Email !== undefined) leader.Email = Email;
-    if (mobileNo !== undefined) leader.mobileNo = mobileNo;
-    if (address !== undefined) leader.address = address;
+    // update fields safely
+    if (Name) leader.Name = Name;
+    if (Email) leader.Email = Email;
+    if (mobileNo) leader.mobileNo = mobileNo;
+    if (address) leader.address = address;
 
     if (password && password.trim() !== "") {
       leader.password = await bcrypt.hash(password, 10);
     }
 
-    // 4. Save safely
-    await leader.save();
+    const updated = await leader.save();
 
     return res.status(200).json({
       success: true,
       message: "TeamLeader updated successfully",
-      leader,
+      leader: updated,
     });
 
   } catch (error) {
