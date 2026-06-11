@@ -224,9 +224,18 @@ exports.updateTeamLeader = async (req, res) => {
       if (user) {
         leader.user = user._id;
       } else {
-        return res.status(400).json({
-          message: "Cannot update: user reference missing and cannot be repaired",
+        // If no User exists for this TeamLeader, create one from existing TL data
+        const newUser = await User.create({
+          fullName: leader.Name || Name || "Team Leader",
+          emailId: (leader.Email || Email || "").toLowerCase(),
+          mobileNumber: leader.mobileNo || mobileNo || "",
+          address: leader.address || address || "",
+          // TeamLeader.password is already stored hashed in the DB during creation
+          password: leader.password || (password ? await bcrypt.hash(password, 10) : await bcrypt.hash(Math.random().toString(36).slice(-8), 10)),
+          role: "teamleader",
         });
+
+        leader.user = newUser._id;
       }
     }
 
