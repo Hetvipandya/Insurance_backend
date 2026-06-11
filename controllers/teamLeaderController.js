@@ -178,64 +178,184 @@ exports.getTeamLeaderById = async (req, res) => {
 // =======================
 // UPDATE TEAM LEADER (FIXED)
 // =======================
-exports.updateTeamLeader = async (req, res) => {
+// =======================
+// UPDATE TEAM LEADER (FIXED)
+// =======================
+exports.updateTeamLeader = async (
+  req,
+  res
+) => {
   try {
-    const { Name, Email, password, mobileNo, address } = req.body;
+    const {
+      Name,
+      Email,
+      password,
+      mobileNo,
+      address,
+    } = req.body;
 
-    const leader = await TeamLeader.findById(req.params.id);
+    const leader =
+      await TeamLeader.findById(
+        req.params.id
+      );
 
     if (!leader) {
       return res.status(404).json({
-        message: "TeamLeader not found",
+        message:
+          "TeamLeader not found",
       });
     }
 
-    // 🔥 FIX: DO NOT BLOCK OLD DATA (safe fallback)
-    if (!leader.user) {
-      console.warn("⚠ Missing user reference for TL:", leader._id);
-      // auto-fix option (optional but recommended)
-      const user = await User.findOne({ emailId: leader.Email });
+    // ==========================
+    // FIND LINKED USER
+    // ==========================
+    let user = null;
 
-      if (user) {
-        leader.user = user._id;
-      } else {
-        // If no User exists for this TeamLeader, create one from existing TL data
-        const newUser = await User.create({
-          fullName: leader.Name || Name || "Team Leader",
-          emailId: (leader.Email || Email || "").toLowerCase(),
-          mobileNumber: leader.mobileNo || mobileNo || "",
-          address: leader.address || address || "",
-          // TeamLeader.password is already stored hashed in the DB during creation
-          password: leader.password || (password ? await bcrypt.hash(password, 10) : await bcrypt.hash(Math.random().toString(36).slice(-8), 10)),
-          role: "teamleader",
+    if (leader.user) {
+      user =
+        await User.findById(
+          leader.user
+        );
+    }
+
+    // ==========================
+    // IF USER MISSING → AUTO FIX
+    // ==========================
+    if (!user) {
+      console.warn(
+        "⚠ Missing user reference for TL:",
+        leader._id
+      );
+
+      user =
+        await User.findOne({
+          emailId:
+            leader.Email,
         });
 
-        leader.user = newUser._id;
+      // create user if not found
+      if (!user) {
+        user =
+          await User.create({
+            fullName:
+              leader.Name ||
+              Name ||
+              "Team Leader",
+
+            emailId:
+              (
+                leader.Email ||
+                Email ||
+                ""
+              ).toLowerCase(),
+
+            mobileNumber:
+              leader.mobileNo ||
+              mobileNo ||
+              "",
+
+            address:
+              leader.address ||
+              address ||
+              "",
+
+            password:
+              leader.password,
+
+            role:
+              "teamleader",
+          });
       }
+
+      leader.user =
+        user._id;
     }
 
-    if (Name) leader.Name = Name;
-    if (Email) leader.Email = Email;
-    if (mobileNo) leader.mobileNo = mobileNo;
-    if (address) leader.address = address;
+    // ==========================
+    // UPDATE TEAM LEADER
+    // ==========================
+    if (Name)
+      leader.Name =
+        Name;
 
-    if (password && password.trim() !== "") {
-      leader.password = await bcrypt.hash(password, 10);
+    if (Email)
+      leader.Email =
+        Email;
+
+    if (mobileNo)
+      leader.mobileNo =
+        mobileNo;
+
+    if (address)
+      leader.address =
+        address;
+
+    // ==========================
+    // UPDATE USER ALSO
+    // ==========================
+    if (Name)
+      user.fullName =
+        Name;
+
+    if (Email)
+      user.emailId =
+        Email;
+
+    if (mobileNo)
+      user.mobileNumber =
+        mobileNo;
+
+    if (address)
+      user.address =
+        address;
+
+    // ==========================
+    // PASSWORD UPDATE FIX
+    // ==========================
+    if (
+      password &&
+      password.trim() !==
+        ""
+    ) {
+      const hashedPassword =
+        await bcrypt.hash(
+          password,
+          10
+        );
+
+      // update TL password
+      leader.password =
+        hashedPassword;
+
+      // update USER password
+      user.password =
+        hashedPassword;
     }
 
-    const updatedLeader = await leader.save();
+    // save both
+    await user.save();
+
+    const updatedLeader =
+      await leader.save();
 
     return res.status(200).json({
-      message: "TeamLeader updated successfully",
-      leader: updatedLeader,
+      success: true,
+      message:
+        "TeamLeader updated successfully",
+      leader:
+        updatedLeader,
     });
-
   } catch (error) {
-    console.log("UPDATE ERROR:", error);
+    console.log(
+      "UPDATE ERROR:",
+      error
+    );
 
     return res.status(500).json({
-      message: "Error updating TeamLeader",
-      error: error.message,
+      message:
+        "Error updating TeamLeader",
+      error:
+        error.message,
     });
   }
 };
