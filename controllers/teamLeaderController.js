@@ -82,49 +82,24 @@ exports.createTeamLeader = async (req, res) => {
 // =======================
 exports.loginTeamLeader = async (req, res) => {
   try {
-    const { Email, password } = req.body;
+    const Email = req.body.Email || req.body.email;
+    const password = req.body.password;
+    if (!Email || !password) return res.status(400).json({ message: "Email and Password are required" });
 
-    if (!Email || !password) {
-      return res.status(400).json({
-        message: "Email and Password are required",
-      });
-    }
-
-    const leader = await TeamLeader.findOne({ Email });
-
-    if (!leader) {
-      return res.status(404).json({ message: "TeamLeader not found" });
-    }
+    const leader = await TeamLeader.findOne({ Email: { $regex: `^${Email}$`, $options: "i" } }).select('+password');
+    if (!leader) return res.status(404).json({ message: "TeamLeader not found" });
+    if (!leader.password) return res.status(500).json({ message: "Server error" });
 
     const isMatch = await bcrypt.compare(password, leader.password);
+    if (!isMatch) return res.status(401).json({ message: "Invalid Password" });
 
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid Password" });
-    }
+    const token = jwt.sign({ id: leader._id, Email: leader.Email, role: "teamleader" }, process.env.JWT_SECRET || "mySecretKey", { expiresIn: "7d" });
 
-    const token = jwt.sign(
-      {
-        id: leader._id,
-        Email: leader.Email,
-        role: "teamleader",
-      },
-      process.env.JWT_SECRET || "mySecretKey",
-      { expiresIn: "7d" }
-    );
-
-    return res.status(200).json({
-      message: "Login successful",
-      token,
-      leader,
-      role: "teamleader",
-    });
-
+    const safeLeader = { _id: leader._id, Name: leader.Name, Email: leader.Email, mobileNo: leader.mobileNo, address: leader.address, user: leader.user };
+    return res.status(200).json({ message: "Login successful", token, leader: safeLeader, role: "teamleader" });
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({
-      message: "Login error",
-      error: error.message,
-    });
+    console.error("Login error:", error);
+    return res.status(500).json({ message: "Login error", error: error.message });
   }
 };
 
