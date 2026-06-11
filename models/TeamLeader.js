@@ -35,6 +35,11 @@ const teamLeaderSchema =
         unique: true,
       },
 
+      address: {
+  type: String,
+  required: true,
+},
+
       assignedApplications: [
         {
            type:

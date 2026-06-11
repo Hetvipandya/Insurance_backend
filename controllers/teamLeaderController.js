@@ -228,46 +228,41 @@ exports.updateTeamLeader = async (req, res) => {
   try {
     const { Name, Email, password, mobileNo, address } = req.body;
 
-    const leader = await TeamLeader.findByIdAndUpdate(
-  req.params.id,
-  {
-    $set: {
-      Name,
-      Email,
-      mobileNo,
-      ...(password ? { password: await bcrypt.hash(password, 10) } : {}),
-    },
-  },
-  { new: true, runValidators: true }
-);
+    // 1. Find existing document FIRST
+    const leader = await TeamLeader.findById(req.params.id);
 
     if (!leader) {
-      return res.status(404).json({ message: "TeamLeader not found" });
+      return res.status(404).json({
+        message: "TeamLeader not found",
+      });
     }
 
-    // update only if provided
-    if (Name !== undefined) leader.Name = Name;
-    if (Email !== undefined) leader.Email = Email;
-    if (mobileNo !== undefined) leader.mobileNo = mobileNo;
-
-    // ⚠️ IMPORTANT: DO NOT touch user field here
-    // just ensure it exists
+    // 2. VERY IMPORTANT: ensure user exists
     if (!leader.user) {
       return res.status(400).json({
         message: "Invalid TeamLeader: missing user reference",
       });
     }
 
+    // 3. Update only provided fields
+    if (Name !== undefined) leader.Name = Name;
+    if (Email !== undefined) leader.Email = Email;
+    if (mobileNo !== undefined) leader.mobileNo = mobileNo;
+    if (address !== undefined) leader.address = address;
+
     if (password && password.trim() !== "") {
       leader.password = await bcrypt.hash(password, 10);
     }
 
+    // 4. Save safely
     await leader.save();
 
     return res.status(200).json({
+      success: true,
       message: "TeamLeader updated successfully",
       leader,
     });
+
   } catch (error) {
     console.log("UPDATE ERROR:", error);
 
