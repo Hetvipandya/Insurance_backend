@@ -5,12 +5,9 @@ const teamLeaderSchema =
     {
       // link with User collection
       user: {
-        type:
-          mongoose.Schema.Types
-            .ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true,
-         immutable: true 
+        required: false,
       },
 
       Name: {
