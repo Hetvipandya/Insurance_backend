@@ -226,24 +226,37 @@ exports.getTeamLeaderById = async (req, res) => {
 
 exports.updateTeamLeader = async (req, res) => {
   try {
-    const { Name, Email, password, mobileNo } = req.body;
+    const { Name, Email, password, mobileNo, address } = req.body;
 
-    const leader = await TeamLeader.findById(req.params.id);
+    const leader = await TeamLeader.findByIdAndUpdate(
+  req.params.id,
+  {
+    $set: {
+      Name,
+      Email,
+      mobileNo,
+      ...(password ? { password: await bcrypt.hash(password, 10) } : {}),
+    },
+  },
+  { new: true, runValidators: true }
+);
 
     if (!leader) {
       return res.status(404).json({ message: "TeamLeader not found" });
     }
 
-    // 🔥 CRITICAL FIX
+    // update only if provided
+    if (Name !== undefined) leader.Name = Name;
+    if (Email !== undefined) leader.Email = Email;
+    if (mobileNo !== undefined) leader.mobileNo = mobileNo;
+
+    // ⚠️ IMPORTANT: DO NOT touch user field here
+    // just ensure it exists
     if (!leader.user) {
       return res.status(400).json({
         message: "Invalid TeamLeader: missing user reference",
       });
     }
-
-    if (Name !== undefined) leader.Name = Name;
-    if (Email !== undefined) leader.Email = Email;
-    if (mobileNo !== undefined) leader.mobileNo = mobileNo;
 
     if (password && password.trim() !== "") {
       leader.password = await bcrypt.hash(password, 10);
@@ -255,7 +268,6 @@ exports.updateTeamLeader = async (req, res) => {
       message: "TeamLeader updated successfully",
       leader,
     });
-
   } catch (error) {
     console.log("UPDATE ERROR:", error);
 
