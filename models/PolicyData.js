@@ -40,6 +40,33 @@ const policyDataSchema = new mongoose.Schema({
   agentName: { type: String },
   isApprovedByAdmin: { type: Boolean, default: false },
   isApprovedByTeamLeader: { type: Boolean, default: false },
+  editRequest: {
+  type: Object,
+  default: null,
+},
+
+editRequestStatus: {
+  type: String,
+  enum: ['none', 'pending', 'approved', 'rejected'],
+  default: 'none',
+},
+
+editRequestedBy: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'User',
+},
+
+teamLeaderApproval: {
+  type: String,
+  enum: ['pending', 'approved', 'rejected'],
+  default: 'pending',
+},
+
+adminApproval: {
+  type: String,
+  enum: ['pending', 'approved', 'rejected'],
+  default: 'pending',
+},
 }, { timestamps: true });
 
 module.exports = mongoose.model('PolicyData', policyDataSchema);
