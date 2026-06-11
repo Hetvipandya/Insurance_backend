@@ -229,7 +229,17 @@ exports.updateTeamLeader = async (req, res) => {
     const { Name, Email, password, mobileNo } = req.body;
 
     const leader = await TeamLeader.findById(req.params.id);
-    if (!leader) return res.status(404).json({ message: "TeamLeader not found" });
+
+    if (!leader) {
+      return res.status(404).json({ message: "TeamLeader not found" });
+    }
+
+    // 🔥 CRITICAL FIX
+    if (!leader.user) {
+      return res.status(400).json({
+        message: "Invalid TeamLeader: missing user reference",
+      });
+    }
 
     if (Name !== undefined) leader.Name = Name;
     if (Email !== undefined) leader.Email = Email;
@@ -241,14 +251,15 @@ exports.updateTeamLeader = async (req, res) => {
 
     await leader.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "TeamLeader updated successfully",
       leader,
     });
 
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
+    console.log("UPDATE ERROR:", error);
+
+    return res.status(500).json({
       message: "Error updating TeamLeader",
       error: error.message,
     });

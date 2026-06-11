@@ -36,7 +36,7 @@ const teamLeaderSchema =
 
       assignedApplications: [
         {
-          type:
+           type:
             mongoose.Schema.Types
               .ObjectId,
           ref: "Application",
