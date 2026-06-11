@@ -227,16 +227,31 @@ exports.getTeamLeaderById = async (req, res) => {
 exports.updateTeamLeader = async (req, res) => {
   try {
     const { Name, Email, password, mobileNo } = req.body;
+
     const leader = await TeamLeader.findById(req.params.id);
     if (!leader) return res.status(404).json({ message: "TeamLeader not found" });
-    if (Name) leader.Name = Name;
-    if (Email) leader.Email = Email;
-    if (password) leader.password = await bcrypt.hash(password, 10);
-    if (mobileNo) leader.mobileNo = mobileNo;
+
+    if (Name !== undefined) leader.Name = Name;
+    if (Email !== undefined) leader.Email = Email;
+    if (mobileNo !== undefined) leader.mobileNo = mobileNo;
+
+    if (password && password.trim() !== "") {
+      leader.password = await bcrypt.hash(password, 10);
+    }
+
     await leader.save();
-    res.status(200).json({ message: "TeamLeader updated successfully", leader });
+
+    res.status(200).json({
+      message: "TeamLeader updated successfully",
+      leader,
+    });
+
   } catch (error) {
-    res.status(500).json({ message: "Error updating TeamLeader", error });
+    console.log(error);
+    res.status(500).json({
+      message: "Error updating TeamLeader",
+      error: error.message,
+    });
   }
 };
 

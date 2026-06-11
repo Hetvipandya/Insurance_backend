@@ -35,7 +35,7 @@ const policyDataSchema = new mongoose.Schema({
   sTex: { type: Number },
   total: { type: Number },
   paymentBy: { type: String },
-  broker: { type: String },
+  broker: { type: String }, 
   irdaiPosp: { type: String },
   agentName: { type: String },
   isApprovedByAdmin: { type: Boolean, default: false },
