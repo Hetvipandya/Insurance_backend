@@ -100,6 +100,11 @@ exports.updatePolicyData = async (
       });
     }
 
+    // Only TeamLeader or Admin can perform direct updates
+    if (requesterRole !== 'teamleader' && requesterRole !== 'admin') {
+      return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
+    }
+
     // TeamLeader/Admin direct update
     const updated =
       await PolicyData.findByIdAndUpdate(
@@ -129,6 +134,11 @@ exports.updatePolicyData = async (
 exports.getPendingPolicyRequests =
   async (req, res) => {
     try {
+      const role = req.user?.role;
+
+      if (role !== 'teamleader' && role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
+      }
       const data =
         await PolicyData.find({
           editRequestStatus:
@@ -168,6 +178,14 @@ exports.getPendingPolicyRequests =
 
       const role =
         req.user.role;
+
+      if (role !== 'teamleader' && role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
+      }
+
+      if (policy.editRequestStatus !== 'pending') {
+        return res.status(400).json({ message: 'No pending edit request for this policy' });
+      }
 
       // TL approval
       if (
@@ -237,18 +255,25 @@ exports.getPendingPolicyRequests =
         });
       }
 
-      policy.editRequestStatus =
-        'rejected';
+      const role = req.user?.role;
 
-      policy.editRequest =
-        null;
+      if (role !== 'teamleader' && role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
+      }
+
+      if (policy.editRequestStatus !== 'pending') {
+        return res.status(400).json({ message: 'No pending edit request for this policy' });
+      }
+
+      // mark rejected and clear pending edits
+      policy.editRequestStatus = 'rejected';
+      policy.editRequest = null;
+      policy.teamLeaderApproval = role === 'teamleader' ? 'rejected' : policy.teamLeaderApproval;
+      policy.adminApproval = role === 'admin' ? 'rejected' : policy.adminApproval;
 
       await policy.save();
 
-      res.json({
-        message:
-          'Request Rejected',
-      });
+      res.json({ message: 'Request Rejected' });
 
     } catch (err) {
       res.status(500).json({

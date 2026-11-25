@@ -42,6 +42,11 @@ router.put(
   authMiddleware,
   assignExecutive
 );
+router.put(
+  "/assign-teamleader/:id",
+  authMiddleware,
+  assignExecutive
+);
 router.get(
   "/teamleader/:id",
   authMiddleware,
