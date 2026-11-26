@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const axios = require("axios");
 const User = require("../models/User");
 const TeamLeader = require("../models/TeamLeader");
 
@@ -351,5 +352,58 @@ exports.deleteUser = async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// ===================== GOOGLE PLACE REVIEWS =====================
+exports.getGooglePlaceReviews = async (req, res) => {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  const placeId = req.params.placeId?.trim();
+
+  if (!apiKey) {
+    return res.status(500).json({
+      success: false,
+      message: "Google Places API is not configured on the server",
+    });
+  }
+
+  if (!placeId) {
+    return res.status(400).json({
+      success: false,
+      message: "Place ID is required",
+    });
+  }
+
+  try {
+    const response = await axios.get(
+      `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+      {
+        headers: {
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask":
+            "id,displayName,rating,userRatingCount,reviews,googleMapsUri",
+        },
+        timeout: 10000,
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: response.data,
+    });
+  } catch (error) {
+    const upstreamMessage =
+      error.response?.data?.error?.message || error.message;
+
+    console.error("Google Places API request failed:", {
+      status: error.response?.status,
+      message: upstreamMessage,
+    });
+
+    return res.status(502).json({
+      success: false,
+      message: "Failed to fetch Google Place reviews",
+      error: upstreamMessage,
+    });
   }
 };

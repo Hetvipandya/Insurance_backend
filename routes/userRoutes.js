@@ -24,5 +24,10 @@ router.delete("/delete/:id", authController.deleteUser);
 
 // ================= USER PROFILE =================
 router.get("/profile/:id", authMiddleware, authController.getUserById);
+router.get(
+  "/google-reviews/:placeId",
+  authMiddleware,
+  authController.getGooglePlaceReviews
+);
 
 module.exports = router; 
