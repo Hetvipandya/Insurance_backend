@@ -195,9 +195,25 @@ exports.getMyApplications = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    // Optional filters
-    const page = Math.max(1, parseInt(req.query.page || "1", 10));
-    const limit = Math.max(1, parseInt(req.query.limit || "0", 10));
+    // Omitting limit returns every matching application for existing clients.
+    const page = Number(req.query.page ?? 1);
+    const limit =
+      req.query.limit === undefined ? 0 : Number(req.query.limit);
+
+    if (!Number.isInteger(page) || page < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "page must be a positive integer",
+      });
+    }
+
+    if (!Number.isInteger(limit) || limit < 0 || limit > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "limit must be an integer between 0 and 100",
+      });
+    }
+
     const statusFilter = req.query.status;
 
     let query = {};
@@ -250,7 +266,12 @@ exports.getMyApplications = async (req, res) => {
 
     console.log("Query used for /my:", JSON.stringify(query), "returned", apps.length, "applications");
 
-    return res.status(200).json({ success: true, data: apps, total, page: limit > 0 ? page : undefined, limit: limit || undefined });
+    return res.status(200).json({
+      success: true,
+      data: apps,
+      total,
+      ...(limit > 0 ? { page, limit } : {}),
+    });
   } catch (err) {
     console.error("GET MY APPLICATIONS ERROR:", err);
     return res.status(500).json({ success: false, message: err.message || "Server Error" });
@@ -501,9 +522,19 @@ exports.getApplicationByTeamLeader =
 
   exports.updateApplication = async (req, res) => {
     try {
-      const body = req.body || {};
-      const files = req.files || {};
-      const application = await Application.findById(req.params.id);
+      req.body = req.body || {};
+
+      console.log("BODY:", req.body);
+      console.log("FILES:", req.files);
+
+      // ================= HELPER FUNCTION =================
+      const getFileUrl = (file) => {
+        return file.path;
+      };
+
+      const application = await Application.findById(
+        req.params.id
+      );
 
       if (!application) {
         return res.status(404).json({
@@ -512,171 +543,282 @@ exports.getApplicationByTeamLeader =
         });
       }
 
-      const getBodyString = (fieldName) => {
-        const value = body[fieldName];
-        return value === undefined || value === null
-          ? ""
-          : String(value).trim();
-      };
-
-      for (const fieldName of ["carNo", "mobileNo", "tp"]) {
-        if (body[fieldName] !== undefined) {
-          const value = getBodyString(fieldName);
-          if (!value) {
-            return res.status(400).json({
-              success: false,
-              message: `${fieldName} cannot be empty`,
-            });
-          }
-          application[fieldName] = value;
-        }
-      }
-
-      if (body.otherDetails !== undefined) {
-        application.otherDetails = getBodyString("otherDetails");
-      }
-
+      // ================= STATUS =================
+      let statusChanged = false;
       let newStatus = null;
-      const requestedStatus = getBodyString("status");
-      if (requestedStatus) {
-        const allowedStatuses = ["pending", "approved", "rejected"];
-        if (!allowedStatuses.includes(requestedStatus)) {
-          return res.status(400).json({
-            success: false,
-            message: "Invalid application status",
-          });
+
+      if (req.body.status?.trim()) {
+        const status =
+          req.body.status.trim();
+
+        // Track if status is being changed to approved or rejected
+        if (status === "approved" || status === "rejected") {
+          statusChanged = true;
+          newStatus = status;
         }
 
-        if (requestedStatus !== application.status) {
-          application.status = requestedStatus;
-          if (requestedStatus === "approved" || requestedStatus === "rejected") {
-            newStatus = requestedStatus;
+        application.status = status;
+
+        // ================= REJECT REASON =================
+        if (status === "rejected") {
+          application.rejectionReason =
+            req.body.rejectionReason
+              ? req.body.rejectionReason
+                  .toString()
+                  .trim()
+              : "";
+        }
+
+        if (status === "approved") {
+          application.rejectionReason =
+            "";
+        }
+      }
+
+      // ================= MOBILE NUMBER =================
+      if (req.body.mobileNo?.trim()) {
+        application.mobileNo =
+          req.body.mobileNo.trim();
+      }
+
+      // ================= EXECUTIVE ASSIGN =================
+      if (
+        req.body.executiveId?.trim()
+      ) {
+        application.executive =
+          req.body.executiveId.trim();
+
+        await Executive.findByIdAndUpdate(
+          req.body.executiveId,
+          {
+            $addToSet: {
+              assignedApplications:
+                application._id,
+            },
           }
-        }
-
-        if (requestedStatus === "rejected") {
-          application.rejectionReason = getBodyString("rejectionReason");
-        } else if (requestedStatus === "approved") {
-          application.rejectionReason = "";
-        }
-      } else if (body.rejectionReason !== undefined) {
-        application.rejectionReason = getBodyString("rejectionReason");
+        );
       }
 
-      const executiveId = getBodyString("executiveId");
-      if (executiveId) {
-        application.executive = executiveId;
-        await Executive.findByIdAndUpdate(executiveId, {
-          $addToSet: { assignedApplications: application._id },
-        });
-      }
+      // ================= HANDLE DOCUMENT UPDATE =================
+      if (
+        req.files &&
+        Object.keys(req.files)
+          .length > 0
+      ) {
+        const addNewDocument = (
+          fieldName
+        ) => {
+          if (
+            req.files[fieldName] &&
+            req.files[fieldName]
+              .length > 0
+          ) {
+        const uploadedFiles =
+    req.files[
+      fieldName
+    ].map(
+      getFileUrl
+    );
 
-      const imageFields = [
-        "rcBookImages",
-        "aadharCardImages",
-        "panCardImages",
-        "oldPolicyImages",
-        "otherImages",
-      ];
-      let hasImageUploads = false;
+            // ================= SAVE HISTORY =================
+            if (
+              !application
+                .newDocuments
+            ) {
+              application.newDocuments =
+                {};
+            }
 
-      for (const fieldName of imageFields) {
-        const uploadedFiles = files[fieldName] || [];
-        if (uploadedFiles.length === 0) continue;
+            if (
+              !application
+                .newDocuments[
+                fieldName
+              ]
+            ) {
+              application.newDocuments[
+                fieldName
+              ] = [];
+            }
 
-        const uploadedUrls = uploadedFiles.map((file) => {
-          if (!file.path) {
-            throw new Error(`Uploaded file URL missing for ${fieldName}`);
+            application.newDocuments[
+              fieldName
+            ].push({
+              urls: uploadedFiles,
+              uploadedAt:
+                new Date(),
+
+              uploadedAfterReject:
+                application.status ===
+                "rejected",
+            });
+
+            // ================= IMPORTANT FIX =================
+            // OLD + NEW IMAGES MERGE
+            application[
+              fieldName
+            ] = [
+              ...(application[
+                fieldName
+              ] || []),
+              ...uploadedFiles,
+            ];
           }
-          return file.path;
-        });
+        };
 
-        if (!application.newDocuments) {
-          application.newDocuments = {};
-        }
-        if (!application.newDocuments[fieldName]) {
-          application.newDocuments[fieldName] = [];
-        }
+        // ================= UPDATE DOCS =================
+        addNewDocument(
+          "rcBookImages"
+        );
 
-        application.newDocuments[fieldName].push({
-          urls: uploadedUrls,
-          uploadedAt: new Date(),
-          uploadedAfterReject: application.status === "rejected",
-        });
-        application[fieldName] = [
-          ...(application[fieldName] || []),
-          ...uploadedUrls,
-        ];
-        hasImageUploads = true;
-      }
+        addNewDocument(
+          "aadharCardImages"
+        );
 
-      const policyDocuments = files.adminPolicyDocument || [];
-      if (policyDocuments.length > 0) {
-        if (req.user?.role !== "admin") {
-          return res.status(403).json({
-            success: false,
-            message: "Only admin can upload policy document",
-          });
-        }
-        if (!policyDocuments[0].path) {
-          throw new Error("Uploaded policy document URL missing");
-        }
-        application.adminPolicyDocument = policyDocuments[0].path;
-      }
+        addNewDocument(
+          "panCardImages"
+        );
 
-      if (hasImageUploads && !requestedStatus) {
-        application.status = "pending";
-        application.rejectionReason = "";
+        addNewDocument(
+          "oldPolicyImages"
+        );
+
+        addNewDocument(
+          "otherImages"
+        );
+
+        // ================= POLICY DOCUMENT =================
+        if (
+          req.files
+            .adminPolicyDocument &&
+          req.files
+            .adminPolicyDocument
+            .length > 0
+        ) {
+        application.adminPolicyDocument =
+    getFileUrl(
+      req.files
+        .adminPolicyDocument[0]
+    );
+  }
+
+        // ================= RESET STATUS AFTER REUPLOAD =================
+        application.status =
+          "pending";
+
+        // clear reject reason after reupload
+        application.rejectionReason =
+          "";
       }
 
       // ================= SAVE =================
       await application.save();
 
       // ================= SEND NOTIFICATION TO DEALER =================
-      try {
-        if (newStatus) {
-          const dealer = await User.findById(application.user);
-          if (dealer?.fcmToken) {
-            let title;
-            let notificationBody;
+    // ================= SEND NOTIFICATION TO DEALER =================
+  try {
+    if (newStatus) {
+      const dealer = await User.findById(
+        application.user
+      );
 
-            if (newStatus === "approved") {
-              title = "Insurance Approved ✅";
-              notificationBody = `Your application for vehicle ${application.carNo} has been approved`;
-            } else {
-              title = "Insurance Rejected ❌";
-              notificationBody = `Your application for vehicle ${application.carNo} has been rejected`;
-              if (application.rejectionReason) {
-                notificationBody += ` | Reason: ${application.rejectionReason}`;
-              }
-            }
+      if (
+        dealer &&
+        dealer.fcmToken
+      ) {
+        let title = "";
+        let body = "";
 
-            await admin.messaging().send({
-              token: dealer.fcmToken,
-              notification: { title, body: notificationBody },
-              android: {
-                priority: "high",
-                notification: {
-                  sound: "default",
-                  channelId: "insurance_channel",
-                },
-              },
-              apns: { payload: { aps: { sound: "default" } } },
-              data: {
-                click_action: "FLUTTER_NOTIFICATION_CLICK",
-                type: "application_status",
-                applicationId: application._id.toString(),
-                status: newStatus,
-                carNo: application.carNo || "",
-                title,
-                body: notificationBody,
-              },
-            });
+        // Approved
+        if (
+          newStatus === "approved"
+        ) {
+          title =
+            "Insurance Approved ✅";
+
+          body = `Your application for vehicle ${application.carNo} has been approved`;
+        }
+
+        // Rejected
+        else if (
+          newStatus ===
+          "rejected"
+        ) {
+          title =
+            "Insurance Rejected ❌";
+
+          body = `Your application for vehicle ${application.carNo} has been rejected`;
+
+          if (
+            application.rejectionReason
+          ) {
+            body += ` | Reason: ${application.rejectionReason}`;
           }
         }
-      } catch (notificationError) {
-        console.error("Notification Error:", notificationError);
+
+        const message = {
+          token: dealer.fcmToken,
+
+          notification: {
+            title,
+            body,
+          },
+
+          android: {
+            priority: "high",
+            notification: {
+              sound: "default",
+              channelId:
+                "insurance_channel",
+            },
+          },
+
+          apns: {
+            payload: {
+              aps: {
+                sound: "default",
+              },
+            },
+          },
+
+          data: {
+            click_action:
+              "FLUTTER_NOTIFICATION_CLICK",
+            type:
+              "application_status",
+            applicationId:
+              application._id.toString(),
+            status:
+              newStatus,
+            carNo:
+              application.carNo || "",
+            title,
+            body,
+          },
+        };
+
+        const response =
+          await admin
+            .messaging()
+            .send(message);
+
+        console.log(
+          "✅ Dealer notification sent:",
+          response
+        );
+      } else {
+        console.log(
+          "❌ Dealer FCM token not found"
+        );
       }
+    }
+  } catch (
+    notificationError
+  ) {
+    console.log(
+      "Notification Error:",
+      notificationError
+    );
+  }
 
       // ================= GET UPDATED DATA =================
       const updatedApplication = await Application.findById(application._id)
@@ -691,14 +833,10 @@ exports.getApplicationByTeamLeader =
         data: updatedApplication,
       });
     } catch (error) {
-      console.error("UPDATE APPLICATION ERROR:", error);
-
-      if (error.name === "CastError") {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid application or executive ID",
-        });
-      }
+      console.log(
+        "UPDATE APPLICATION ERROR:",
+        error
+      );
 
       return res.status(500).json({
         success: false,
